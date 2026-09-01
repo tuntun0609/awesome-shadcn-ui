@@ -1,4 +1,9 @@
 {
+  "extends": [
+    "ultracite/biome/core",
+    "ultracite/biome/react",
+    "ultracite/biome/next"
+  ],
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "vcs": {
     "enabled": true,
@@ -35,10 +40,5 @@
         "organizeImports": "on"
       }
     }
-  },
-  "extends": [
-    "ultracite/biome/core",
-    "ultracite/biome/react",
-    "ultracite/biome/next"
-  ]
+  }
 }
