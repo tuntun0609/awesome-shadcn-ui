@@ -129,6 +129,7 @@ export const libraries = [
       "Composable application components for complex workflows beyond the core shadcn set.",
     featuredRank: 5,
     github: "https://github.com/shadcnblocks/kibo",
+    logo: "/logos/kibo-ui.png",
     name: "Kibo UI",
     pricing: "free",
     slug: "kibo-ui",
@@ -144,6 +145,7 @@ export const libraries = [
     description:
       "Accessible, composable primitives for building richer interactions and application interfaces.",
     github: "https://github.com/sadmann7/diceui",
+    logo: "/logos/dice-ui.png",
     name: "Dice UI",
     pricing: "free",
     slug: "dice-ui",
@@ -159,6 +161,7 @@ export const libraries = [
     description:
       "Playful, production-ready components and blocks with a focused shadcn registry.",
     github: "https://github.com/kokonut-labs/kokonutui",
+    logo: "/logos/kokonut-ui.png",
     name: "Kokonut UI",
     pricing: "freemium",
     slug: "kokonut-ui",
@@ -174,6 +177,7 @@ export const libraries = [
     description:
       "An open component collection with an optional Pro registry for larger interface sections.",
     github: "https://github.com/starc007/ui-components",
+    logo: "/logos/beui.png",
     name: "beUI",
     pricing: "freemium",
     slug: "beui",
@@ -188,6 +192,7 @@ export const libraries = [
     delivery: ["blocks"],
     description:
       "Ready-made authentication and application blocks distributed through a shadcn registry.",
+    logo: "/logos/efferd.png",
     name: "Efferd",
     pricing: "freemium",
     slug: "efferd",
@@ -202,6 +207,7 @@ export const libraries = [
     delivery: ["blocks", "templates"],
     description:
       "Premium marketing sections and templates delivered as a private shadcn registry.",
+    logo: "/logos/tailark.svg",
     name: "Tailark",
     pricing: "paid",
     slug: "tailark",
