@@ -14,6 +14,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { type ReactNode, useState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { Library } from "@/data/libraries";
 import {
   accessModels,
@@ -59,6 +66,12 @@ const labels: Record<string, string> = {
   templates: "Templates",
   undisclosed: "Undisclosed",
 };
+
+const sortOptions: ReadonlyArray<{ label: string; value: CatalogSort }> = [
+  { label: "Featured first", value: "featured" },
+  { label: "Recently updated", value: "recently-updated" },
+  { label: "Most starred", value: "most-starred" },
+];
 
 const readList = (params: URLSearchParams, key: string) =>
   params.get(key)?.split(",").filter(Boolean) ?? [];
@@ -236,7 +249,7 @@ export function LibraryDirectory({
 
   return (
     <section aria-labelledby="directory-title" className="pb-24">
-      <div className="border-border border-b pb-5">
+      <div className="pb-5">
         <div className="flex items-end justify-between gap-6">
           <div>
             <p className="font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
@@ -270,16 +283,25 @@ export function LibraryDirectory({
             />
           </label>
 
-          <select
-            aria-label="Sort libraries"
-            className="h-11 rounded-lg border bg-background px-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
-            onChange={(event) => setParam("sort", event.target.value)}
+          <Select
+            items={sortOptions}
+            onValueChange={(value) => setParam("sort", value ?? "")}
             value={sort}
           >
-            <option value="featured">Featured first</option>
-            <option value="recently-updated">Recently updated</option>
-            <option value="most-starred">Most starred</option>
-          </select>
+            <SelectTrigger
+              aria-label="Sort libraries"
+              className="h-11 w-full rounded-lg border-border bg-background px-3 data-[size=default]:h-11 md:w-48"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="end">
+              {sortOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           <button
             className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border bg-background px-3 text-sm md:hidden"
@@ -305,12 +327,12 @@ export function LibraryDirectory({
         </div>
       </div>
 
-      <div className="divide-y divide-border border-border border-b">
+      <div>
         {visibleLibraries.map((library) => {
           const metric = metrics.repositories[library.slug];
           return (
             <article
-              className="group grid gap-4 py-6 sm:grid-cols-[44px_minmax(0,1fr)_auto] sm:items-center sm:gap-5"
+              className="group relative -mx-4 grid gap-4 rounded-xl px-4 py-6 transition-colors after:absolute after:right-4 after:bottom-0 after:left-4 after:h-px after:bg-border/40 after:content-[''] last:after:hidden hover:bg-muted/35 sm:grid-cols-[44px_minmax(0,1fr)_auto] sm:items-center sm:gap-5 sm:after:left-20"
               key={library.slug}
             >
               <div className="relative flex size-11 items-center justify-center overflow-hidden rounded-xl border bg-card font-semibold text-sm shadow-sm">
