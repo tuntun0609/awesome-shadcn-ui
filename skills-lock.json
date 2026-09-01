@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "git-workflow": {
+      "source": "tuntun0609/skills",
+      "sourceType": "github",
+      "skillPath": "skills/git-workflow/SKILL.md",
+      "computedHash": "edcdb3f2ff4f48bfe50bfb6974cf7f2bffd79f4570412c0aba836f6987225995"
+    }
+  }
+}
