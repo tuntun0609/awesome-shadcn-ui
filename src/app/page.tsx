@@ -1,69 +1,38 @@
-import Image from "next/image";
+import { Suspense } from "react";
+import { LibraryDirectory } from "@/components/library-directory";
+import { SiteFooter } from "@/components/site-footer";
+import { SiteHeader } from "@/components/site-header";
+import metrics from "@/data/github-metrics.json";
+import { libraries } from "@/data/libraries";
+import type { GithubSnapshot } from "@/lib/catalog";
 
 export default function Home() {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex w-full max-w-3xl flex-1 flex-col items-center justify-between bg-white px-16 py-32 sm:items-start dark:bg-black">
-        <Image
-          alt="Next.js logo"
-          className="h-5 w-[100px] dark:invert"
-          height={20}
-          priority
-          src="/next.svg"
-          width={100}
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs font-semibold text-3xl text-black leading-10 tracking-tight dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg text-zinc-600 leading-8 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <main>
+      <div className="mx-auto w-full max-w-[1080px] px-5 sm:px-8">
+        <SiteHeader />
+        <section className="grid gap-10 py-20 sm:py-28 md:grid-cols-[minmax(0,1fr)_260px] md:items-end">
+          <div>
+            <p className="font-mono text-[11px] text-blue-600 uppercase tracking-[0.2em] dark:text-blue-400">
+              A curated shadcn ecosystem index
+            </p>
+            <h1 className="mt-5 max-w-3xl font-heading text-5xl leading-[0.98] tracking-[-0.04em] sm:text-6xl md:text-7xl">
+              Find the UI library that fits your next build.
+            </h1>
+          </div>
+          <p className="max-w-sm text-muted-foreground text-sm leading-6 md:pb-1">
+            Compare component registries, pricing models, source access, and
+            project activity—all in one quiet directory.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 font-medium text-base sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] md:w-[158px] dark:hover:bg-[#ccc]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            <Image
-              alt="Vercel logomark"
-              className="h-[14px] w-4 dark:invert"
-              height={14}
-              src="/vercel.svg"
-              width={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-black/[.08] border-solid px-5 transition-colors hover:border-transparent hover:bg-black/[.04] md:w-[158px] dark:border-white/[.145] dark:hover:bg-[#1a1a1a]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+        </section>
+        <Suspense fallback={<div className="min-h-[460px] border-t" />}>
+          <LibraryDirectory
+            libraries={libraries}
+            metrics={metrics as GithubSnapshot}
+          />
+        </Suspense>
+        <SiteFooter />
+      </div>
+    </main>
   );
 }

@@ -1,0 +1,32 @@
+name: Correct an existing listing
+description: Report inaccurate or outdated information in the directory.
+title: "[Correction]: "
+labels:
+  - correction
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping keep the catalog accurate. New library submissions are not accepted at this time.
+  - type: input
+    id: library
+    attributes:
+      label: Library
+      placeholder: Magic UI
+    validations:
+      required: true
+  - type: textarea
+    id: correction
+    attributes:
+      label: What should be corrected?
+      description: Describe the current value and the proposed correction.
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Public source
+      description: Link to an official page or repository that supports the correction.
+      placeholder: https://example.com/docs
+    validations:
+      required: true

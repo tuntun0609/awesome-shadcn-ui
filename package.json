@@ -11,6 +11,7 @@
     "lint": "biome check",
     "prepare": "lefthook install",
     "start": "next start",
+    "sync:github": "bun scripts/github-sync.ts",
     "test": "bun test"
   },
   "dependencies": {
