@@ -41,7 +41,6 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
-      suppressHydrationWarning
       className={cn(
         "h-full",
         "antialiased",
@@ -51,6 +50,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         inter.variable
       )}
       lang="en"
+      suppressHydrationWarning
     >
       <body className="min-h-full" suppressHydrationWarning>
         {children}
