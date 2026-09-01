@@ -12,6 +12,7 @@
     "prepare": "lefthook install",
     "start": "next start",
     "sync:github": "bun scripts/github-sync.ts",
+    "sync:icons": "bun scripts/icon-sync.ts",
     "test": "bun test"
   },
   "dependencies": {
