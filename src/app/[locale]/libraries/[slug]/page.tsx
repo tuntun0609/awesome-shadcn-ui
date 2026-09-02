@@ -6,6 +6,7 @@ import {
   Star,
 } from "lucide-react";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
@@ -14,6 +15,7 @@ import { SiteHeader } from "@/components/site-header";
 import { getCatalogEntry } from "@/db/catalog-data";
 import { Link } from "@/i18n/navigation";
 import { formatCommitDate, formatCompactNumber } from "@/lib/catalog";
+import { withRefParam } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +51,7 @@ export default async function LibraryPage({
     notFound();
   }
   const { library, metric } = entry;
+  const host = (await headers()).get("host") ?? "";
 
   const [t, tagsT, metricsT, locale] = await Promise.all([
     getTranslations("libraryDetail"),
@@ -66,7 +69,7 @@ export default async function LibraryPage({
 
   return (
     <main>
-      <div className="mx-auto w-full max-w-[1080px] px-5 sm:px-8">
+      <div className="mx-auto w-full max-w-270 px-5 sm:px-8">
         <SiteHeader />
         <article className="mx-auto max-w-3xl py-16 sm:py-24">
           <Link
@@ -162,7 +165,7 @@ export default async function LibraryPage({
           <div className="mt-12 flex flex-wrap gap-3 border-t pt-8">
             <a
               className="inline-flex h-11 items-center gap-2 rounded-lg bg-foreground px-4 font-medium text-background text-sm"
-              href={library.website}
+              href={withRefParam(library.website, host)}
               rel="noreferrer"
               target="_blank"
             >

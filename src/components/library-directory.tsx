@@ -13,7 +13,7 @@ import {
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import {
   Select,
   SelectContent,
@@ -39,7 +39,7 @@ import {
   sourceModels,
   useCases,
 } from "@/lib/catalog-model";
-import { cn } from "@/lib/utils";
+import { cn, withRefParam } from "@/lib/utils";
 
 interface LibraryDirectoryProps {
   libraries: Library[];
@@ -172,6 +172,11 @@ export function LibraryDirectory({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [host, setHost] = useState("");
+
+  useEffect(() => {
+    setHost(window.location.host);
+  }, []);
 
   const filters: CatalogFilters = {
     access: readList(searchParams, "access"),
@@ -388,7 +393,7 @@ export function LibraryDirectory({
               <a
                 aria-label={t("visit", { name: library.name })}
                 className="inline-flex size-9 items-center justify-center rounded-lg border text-muted-foreground transition-[color,border-color] hover:border-blue-500/50 hover:text-blue-600 sm:justify-self-end dark:hover:text-blue-400"
-                href={library.website}
+                href={withRefParam(library.website, host)}
                 rel="noreferrer"
                 target="_blank"
               >
