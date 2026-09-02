@@ -77,29 +77,34 @@ export function sortLibraries(
   });
 }
 
-export function formatCompactNumber(value: number) {
-  return new Intl.NumberFormat("en", {
+export function formatCompactNumber(value: number, locale: string) {
+  return new Intl.NumberFormat(locale, {
     maximumFractionDigits: 1,
     notation: "compact",
   }).format(value);
 }
 
-export function formatCommitDate(value: string, now = new Date()) {
+export function formatCommitDate(
+  value: string,
+  locale: string,
+  outdatedLabel: string,
+  now = new Date()
+) {
   const date = new Date(value);
   const days = Math.floor((now.getTime() - date.getTime()) / 86_400_000);
 
-  if (days < 1) {
-    return "today";
-  }
   if (days <= 7) {
-    return `${days}d ago`;
+    return new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(
+      -days,
+      "day"
+    );
   }
 
-  const exact = new Intl.DateTimeFormat("en", {
+  const exact = new Intl.DateTimeFormat(locale, {
     day: "numeric",
     month: "short",
     year: "numeric",
   }).format(date);
 
-  return days > 30 ? `${exact} · possibly outdated` : exact;
+  return days > 30 ? `${exact} · ${outdatedLabel}` : exact;
 }

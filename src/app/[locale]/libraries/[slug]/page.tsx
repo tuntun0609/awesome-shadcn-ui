@@ -7,46 +7,32 @@ import {
 } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { getCatalogEntry } from "@/db/catalog-data";
+import { Link } from "@/i18n/navigation";
 import { formatCommitDate, formatCompactNumber } from "@/lib/catalog";
 
 export const dynamic = "force-dynamic";
 
-const labels: Record<string, string> = {
-  ai: "AI",
-  blocks: "Blocks",
-  commerce: "Commerce",
-  components: "Components",
-  content: "Content",
-  dashboard: "Dashboard",
-  "data-display": "Data display",
-  direct: "Direct access",
-  free: "Free",
-  freemium: "Freemium",
-  "login-required": "Login required",
-  marketing: "Marketing",
-  "open-source": "Open source",
-  paid: "Paid",
-  proprietary: "Proprietary",
-  "purchase-required": "Purchase required",
-  "source-available": "Source available",
-  templates: "Templates",
-  undisclosed: "Undisclosed",
-};
-
 export async function generateMetadata({
   params,
-}: PageProps<"/libraries/[slug]">): Promise<Metadata> {
+}: PageProps<"/[locale]/libraries/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const entry = await getCatalogEntry(slug);
   if (!entry) {
     return {};
   }
   return {
+    alternates: {
+      languages: {
+        en: `/libraries/${slug}`,
+        "x-default": `/libraries/${slug}`,
+        zh: `/zh/libraries/${slug}`,
+      },
+    },
     description: entry.library.description,
     openGraph: { images: [] },
     title: entry.library.name,
@@ -56,13 +42,27 @@ export async function generateMetadata({
 
 export default async function LibraryPage({
   params,
-}: PageProps<"/libraries/[slug]">) {
+}: PageProps<"/[locale]/libraries/[slug]">) {
   const { slug } = await params;
   const entry = await getCatalogEntry(slug);
   if (!entry) {
     notFound();
   }
   const { library, metric } = entry;
+
+  const [t, tagsT, metricsT, locale] = await Promise.all([
+    getTranslations("libraryDetail"),
+    getTranslations("tags"),
+    getTranslations("metrics"),
+    getLocale(),
+  ]);
+
+  const stats = [
+    [t("source"), tagsT(library.source)],
+    [t("pricing"), tagsT(library.pricing)],
+    [t("access"), tagsT(library.access)],
+    [t("added"), library.addedAt],
+  ] as const;
 
   return (
     <main>
@@ -74,7 +74,7 @@ export default async function LibraryPage({
             href="/"
           >
             <ArrowLeft aria-hidden="true" className="size-4" />
-            Back to directory
+            {t("backToDirectory")}
           </Link>
           <div className="mt-12 flex items-start gap-5">
             <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border bg-card font-semibold shadow-sm">
@@ -101,12 +101,7 @@ export default async function LibraryPage({
             </div>
           </div>
           <dl className="mt-12 grid gap-px overflow-hidden rounded-xl border bg-border sm:grid-cols-2">
-            {[
-              ["Source", labels[library.source]],
-              ["Pricing", labels[library.pricing]],
-              ["Access", labels[library.access]],
-              ["Added", library.addedAt],
-            ].map(([label, value]) => (
+            {stats.map(([label, value]) => (
               <div className="bg-background p-5" key={label}>
                 <dt className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.16em]">
                   {label}
@@ -117,21 +112,21 @@ export default async function LibraryPage({
           </dl>
           <div className="mt-10 grid gap-8 sm:grid-cols-2">
             <section>
-              <h2 className="font-medium text-sm">What it ships</h2>
+              <h2 className="font-medium text-sm">{t("whatItShips")}</h2>
               <div className="mt-3 flex flex-wrap gap-2">
                 {library.delivery.map((item) => (
                   <span className="tag" key={item}>
-                    {labels[item]}
+                    {tagsT(item)}
                   </span>
                 ))}
               </div>
             </section>
             <section>
-              <h2 className="font-medium text-sm">Best suited for</h2>
+              <h2 className="font-medium text-sm">{t("bestSuitedFor")}</h2>
               <div className="mt-3 flex flex-wrap gap-2">
                 {library.useCases.map((item) => (
                   <span className="tag" key={item}>
-                    {labels[item]}
+                    {tagsT(item)}
                   </span>
                 ))}
               </div>
@@ -140,17 +135,25 @@ export default async function LibraryPage({
           {metric ? (
             <section className="mt-10 rounded-xl border p-5">
               <h2 className="font-mono text-[10px] text-muted-foreground uppercase tracking-[0.16em]">
-                Manual GitHub snapshot
+                {t("snapshot")}
               </h2>
               <div className="mt-3 flex flex-wrap gap-5 text-sm">
                 <span className="inline-flex items-center gap-2">
                   <Star aria-hidden="true" className="size-4" />
-                  {formatCompactNumber(metric.stars)} stars
+                  {metricsT("stars", {
+                    count: formatCompactNumber(metric.stars, locale),
+                  })}
                 </span>
                 {metric.latestCommitAt ? (
                   <span className="inline-flex items-center gap-2 text-muted-foreground">
                     <CalendarClock aria-hidden="true" className="size-4" />
-                    Last commit {formatCommitDate(metric.latestCommitAt)}
+                    {metricsT("lastCommit", {
+                      date: formatCommitDate(
+                        metric.latestCommitAt,
+                        locale,
+                        metricsT("possiblyOutdated")
+                      ),
+                    })}
                   </span>
                 ) : null}
               </div>
@@ -163,7 +166,7 @@ export default async function LibraryPage({
               rel="noreferrer"
               target="_blank"
             >
-              Visit official site
+              {t("visitSite")}
               <ArrowUpRight aria-hidden="true" className="size-4" />
             </a>
             {library.github ? (
@@ -174,7 +177,7 @@ export default async function LibraryPage({
                 target="_blank"
               >
                 <Code2 aria-hidden="true" className="size-4" />
-                View repository
+                {t("viewRepository")}
               </a>
             ) : null}
           </div>

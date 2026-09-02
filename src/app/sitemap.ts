@@ -8,17 +8,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const updatedAt = new Date("2026-09-01");
   const { libraries } = await getCatalog();
 
-  return [
-    { changeFrequency: "weekly", lastModified: updatedAt, url: siteUrl },
-    {
-      changeFrequency: "monthly",
-      lastModified: updatedAt,
-      url: `${siteUrl}/about`,
-    },
+  const pages: ReadonlyArray<{
+    changeFrequency: "weekly" | "monthly";
+    lastModified: Date;
+    path: string;
+  }> = [
+    { changeFrequency: "weekly", lastModified: updatedAt, path: "" },
+    { changeFrequency: "monthly", lastModified: updatedAt, path: "/about" },
     ...libraries.map((library) => ({
       changeFrequency: "monthly" as const,
       lastModified: new Date(library.addedAt),
-      url: `${siteUrl}/libraries/${library.slug}`,
+      path: `/libraries/${library.slug}`,
     })),
   ];
+
+  return pages.flatMap((page) => {
+    const en = `${siteUrl}${page.path}`;
+    const zh = `${siteUrl}/zh${page.path}`;
+    const alternates = { languages: { en, "x-default": en, zh } };
+
+    return [
+      { ...page, alternates, url: en },
+      { ...page, alternates, url: zh },
+    ];
+  });
 }

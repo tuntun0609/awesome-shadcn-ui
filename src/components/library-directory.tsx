@@ -11,8 +11,8 @@ import {
   X,
 } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 import {
   Select,
@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Link } from "@/i18n/navigation";
 import {
   type CatalogFilters,
   type CatalogSort,
@@ -45,32 +46,10 @@ interface LibraryDirectoryProps {
   metrics: GithubSnapshot;
 }
 
-const labels: Record<string, string> = {
-  ai: "AI",
-  blocks: "Blocks",
-  commerce: "Commerce",
-  components: "Components",
-  content: "Content",
-  dashboard: "Dashboard",
-  "data-display": "Data display",
-  direct: "Direct access",
-  free: "Free",
-  freemium: "Freemium",
-  "login-required": "Login required",
-  marketing: "Marketing",
-  "open-source": "Open source",
-  paid: "Paid",
-  proprietary: "Proprietary",
-  "purchase-required": "Purchase required",
-  "source-available": "Source available",
-  templates: "Templates",
-  undisclosed: "Undisclosed",
-};
-
-const sortOptions: ReadonlyArray<{ label: string; value: CatalogSort }> = [
-  { label: "Featured first", value: "featured" },
-  { label: "Recently updated", value: "recently-updated" },
-  { label: "Most starred", value: "most-starred" },
+const sortValues: readonly CatalogSort[] = [
+  "featured",
+  "recently-updated",
+  "most-starred",
 ];
 
 const readList = (params: URLSearchParams, key: string) =>
@@ -100,6 +79,8 @@ function FilterGroup({
   onToggle: (value: string) => void;
   options: readonly string[];
 }) {
+  const tagsT = useTranslations("tags");
+
   return (
     <fieldset>
       <legend className="mb-2 font-mono text-[10px] text-muted-foreground uppercase tracking-[0.16em]">
@@ -119,7 +100,7 @@ function FilterGroup({
             onClick={() => onToggle(option)}
             type="button"
           >
-            {labels[option]}
+            {tagsT(option)}
           </button>
         ))}
       </div>
@@ -134,35 +115,37 @@ function FilterGroups({
   filters: CatalogFilters;
   onToggle: (key: string, value: string) => void;
 }) {
+  const t = useTranslations("filterGroups");
+
   return (
     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
       <FilterGroup
         active={filters.source}
-        label="Source"
+        label={t("source")}
         onToggle={(value) => onToggle("source", value)}
         options={sourceModels}
       />
       <FilterGroup
         active={filters.pricing}
-        label="Pricing"
+        label={t("pricing")}
         onToggle={(value) => onToggle("pricing", value)}
         options={pricingModels}
       />
       <FilterGroup
         active={filters.delivery}
-        label="Delivery"
+        label={t("delivery")}
         onToggle={(value) => onToggle("delivery", value)}
         options={deliveryTypes}
       />
       <FilterGroup
         active={filters.access}
-        label="Access"
+        label={t("access")}
         onToggle={(value) => onToggle("access", value)}
         options={accessModels}
       />
       <FilterGroup
         active={filters.useCases}
-        label="Use case"
+        label={t("use")}
         onToggle={(value) => onToggle("use", value)}
         options={useCases}
       />
@@ -182,6 +165,10 @@ export function LibraryDirectory({
   libraries,
   metrics,
 }: LibraryDirectoryProps) {
+  const t = useTranslations("directory");
+  const tagsT = useTranslations("tags");
+  const metricsT = useTranslations("metrics");
+  const locale = useLocale();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -247,21 +234,26 @@ export function LibraryDirectory({
 
   const clearFilters = () => replaceParams(new URLSearchParams());
 
+  const sortItems = sortValues.map((value) => ({
+    label: t(`sort.${value}`),
+    value,
+  }));
+
   return (
     <section aria-labelledby="directory-title" className="pb-24">
       <div className="pb-5">
         <div>
           <p className="font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
-            Browse the directory
+            {t("eyebrow")}
           </p>
           <h2 className="mt-2 font-medium text-xl" id="directory-title">
-            Libraries that ship through the shadcn CLI
+            {t("heading")}
           </h2>
         </div>
 
         <div className="mt-7 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto]">
           <label className="group relative block">
-            <span className="sr-only">Search libraries</span>
+            <span className="sr-only">{t("searchLabel")}</span>
             <Search
               aria-hidden="true"
               className="absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-blue-600 dark:group-focus-within:text-blue-400"
@@ -269,25 +261,25 @@ export function LibraryDirectory({
             <input
               className="h-11 w-full rounded-lg border bg-background pr-4 pl-11 text-sm outline-none transition-[border-color,box-shadow] placeholder:text-muted-foreground/70 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
               onChange={(event) => setParam("q", event.target.value)}
-              placeholder="Search names, descriptions, or tags…"
+              placeholder={t("searchPlaceholder")}
               type="search"
               value={filters.query}
             />
           </label>
 
           <Select
-            items={sortOptions}
+            items={sortItems}
             onValueChange={(value) => setParam("sort", value ?? "")}
             value={sort}
           >
             <SelectTrigger
-              aria-label="Sort libraries"
+              aria-label={t("sortLabel")}
               className="h-11 w-full rounded-lg border-border bg-background px-3 data-[size=default]:h-11 md:w-48"
             >
               <SelectValue />
             </SelectTrigger>
             <SelectContent align="end">
-              {sortOptions.map((option) => (
+              {sortItems.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
                 </SelectItem>
@@ -301,7 +293,8 @@ export function LibraryDirectory({
             type="button"
           >
             <Filter aria-hidden="true" className="size-4" />
-            Filters{selectedCount ? ` (${selectedCount})` : ""}
+            {t("filters")}
+            {selectedCount ? ` (${selectedCount})` : ""}
           </button>
         </div>
 
@@ -313,7 +306,7 @@ export function LibraryDirectory({
               onClick={clearFilters}
               type="button"
             >
-              Clear filters
+              {t("clearFilters")}
             </button>
           ) : null}
         </div>
@@ -353,7 +346,7 @@ export function LibraryDirectory({
                   {library.featuredRank ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2 py-0.5 font-medium text-[10px] text-blue-700 uppercase tracking-wide dark:text-blue-300">
                       <Sparkles aria-hidden="true" className="size-2.5" />
-                      Featured
+                      {t("featured")}
                     </span>
                   ) : null}
                 </div>
@@ -361,18 +354,18 @@ export function LibraryDirectory({
                   {library.description}
                 </p>
                 <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-                  <span className="tag">{labels[library.source]}</span>
-                  <span className="tag">{labels[library.pricing]}</span>
+                  <span className="tag">{tagsT(library.source)}</span>
+                  <span className="tag">{tagsT(library.pricing)}</span>
                   {library.delivery.slice(0, 2).map((delivery) => (
                     <span className="tag" key={delivery}>
-                      {labels[delivery]}
+                      {tagsT(delivery)}
                     </span>
                   ))}
                   {metric ? (
                     <>
                       <Metric>
                         <Star aria-hidden="true" className="size-3" />
-                        {formatCompactNumber(metric.stars)}
+                        {formatCompactNumber(metric.stars, locale)}
                       </Metric>
                       {metric.latestCommitAt ? (
                         <Metric>
@@ -380,7 +373,11 @@ export function LibraryDirectory({
                             aria-hidden="true"
                             className="size-3"
                           />
-                          {formatCommitDate(metric.latestCommitAt)}
+                          {formatCommitDate(
+                            metric.latestCommitAt,
+                            locale,
+                            metricsT("possiblyOutdated")
+                          )}
                         </Metric>
                       ) : null}
                     </>
@@ -389,7 +386,7 @@ export function LibraryDirectory({
               </div>
 
               <a
-                aria-label={`Visit ${library.name}`}
+                aria-label={t("visit", { name: library.name })}
                 className="inline-flex size-9 items-center justify-center rounded-lg border text-muted-foreground transition-[color,border-color] hover:border-blue-500/50 hover:text-blue-600 sm:justify-self-end dark:hover:text-blue-400"
                 href={library.website}
                 rel="noreferrer"
@@ -404,29 +401,29 @@ export function LibraryDirectory({
 
       {visibleLibraries.length === 0 ? (
         <div className="border-border border-b py-20 text-center">
-          <p className="font-medium">No libraries match those filters.</p>
+          <p className="font-medium">{t("noMatch")}</p>
           <button
             className="mt-3 text-blue-600 text-sm underline underline-offset-4 dark:text-blue-400"
             onClick={clearFilters}
             type="button"
           >
-            Clear all filters
+            {t("clearAllFilters")}
           </button>
         </div>
       ) : null}
 
       {mobileFiltersOpen ? (
         <div
-          aria-label="Library filters"
+          aria-label={t("filtersLabel")}
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-end bg-black/45 md:hidden"
           role="dialog"
         >
           <div className="max-h-[85vh] w-full overflow-y-auto rounded-t-2xl bg-background p-5 shadow-2xl">
             <div className="mb-6 flex items-center justify-between">
-              <h3 className="font-medium text-lg">Filters</h3>
+              <h3 className="font-medium text-lg">{t("filters")}</h3>
               <button
-                aria-label="Close filters"
+                aria-label={t("closeFilters")}
                 className="inline-flex size-9 items-center justify-center rounded-lg border"
                 onClick={() => setMobileFiltersOpen(false)}
                 type="button"
@@ -441,14 +438,14 @@ export function LibraryDirectory({
                 onClick={clearFilters}
                 type="button"
               >
-                Clear
+                {t("clear")}
               </button>
               <button
                 className="h-11 rounded-lg bg-foreground text-background text-sm"
                 onClick={() => setMobileFiltersOpen(false)}
                 type="button"
               >
-                Show {visibleLibraries.length}
+                {t("show", { count: visibleLibraries.length })}
               </button>
             </div>
           </div>

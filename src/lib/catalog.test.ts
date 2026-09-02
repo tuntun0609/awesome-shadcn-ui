@@ -106,7 +106,12 @@ describe("data and dates", () => {
 
   test("marks snapshots older than 30 days as potentially outdated", () => {
     expect(
-      formatCommitDate("2026-07-01T00:00:00.000Z", new Date("2026-09-01"))
+      formatCommitDate(
+        "2026-07-01T00:00:00.000Z",
+        "en",
+        "possibly outdated",
+        new Date("2026-09-01")
+      )
     ).toContain("possibly outdated");
   });
 });

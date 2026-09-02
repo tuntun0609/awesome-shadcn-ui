@@ -1,0 +1,125 @@
+{
+  "metadata": {
+    "description": "A curated directory of UI libraries with shadcn CLI support.",
+    "title": "Awesome shadcn/ui",
+    "titleTemplate": "%s — Awesome shadcn/ui"
+  },
+  "header": {
+    "about": "About",
+    "github": "View the project on GitHub",
+    "navLabel": "Primary navigation"
+  },
+  "localeSwitcher": {
+    "label": "Change language"
+  },
+  "theme": {
+    "toDark": "Switch to dark theme",
+    "toLight": "Switch to light theme"
+  },
+  "footer": {
+    "methodology": "Methodology",
+    "note": "Curated independently. Compatibility claims are not verified.",
+    "reportCorrection": "Report a correction"
+  },
+  "home": {
+    "eyebrow": "A curated shadcn ecosystem index",
+    "subtitle": "Compare component registries, pricing models, source access, and project activity—all in one quiet directory.",
+    "title": "Find the UI library that fits your next build."
+  },
+  "directory": {
+    "clear": "Clear",
+    "clearAllFilters": "Clear all filters",
+    "clearFilters": "Clear filters",
+    "closeFilters": "Close filters",
+    "eyebrow": "Browse the directory",
+    "featured": "Featured",
+    "filters": "Filters",
+    "filtersLabel": "Library filters",
+    "heading": "Libraries that ship through the shadcn CLI",
+    "noMatch": "No libraries match those filters.",
+    "searchLabel": "Search libraries",
+    "searchPlaceholder": "Search names, descriptions, or tags…",
+    "show": "Show {count}",
+    "sort": {
+      "featured": "Featured first",
+      "most-starred": "Most starred",
+      "recently-updated": "Recently updated"
+    },
+    "sortLabel": "Sort libraries",
+    "visit": "Visit {name}"
+  },
+  "filterGroups": {
+    "access": "Access",
+    "delivery": "Delivery",
+    "pricing": "Pricing",
+    "source": "Source",
+    "use": "Use case"
+  },
+  "metrics": {
+    "lastCommit": "Last commit {date}",
+    "possiblyOutdated": "possibly outdated",
+    "stars": "{count} stars"
+  },
+  "tags": {
+    "ai": "AI",
+    "blocks": "Blocks",
+    "commerce": "Commerce",
+    "components": "Components",
+    "content": "Content",
+    "dashboard": "Dashboard",
+    "data-display": "Data display",
+    "direct": "Direct access",
+    "free": "Free",
+    "freemium": "Freemium",
+    "login-required": "Login required",
+    "marketing": "Marketing",
+    "open-source": "Open source",
+    "paid": "Paid",
+    "proprietary": "Proprietary",
+    "purchase-required": "Purchase required",
+    "source-available": "Source available",
+    "templates": "Templates",
+    "undisclosed": "Undisclosed"
+  },
+  "libraryDetail": {
+    "access": "Access",
+    "added": "Added",
+    "backToDirectory": "Back to directory",
+    "bestSuitedFor": "Best suited for",
+    "pricing": "Pricing",
+    "snapshot": "Manual GitHub snapshot",
+    "source": "Source",
+    "viewRepository": "View repository",
+    "visitSite": "Visit official site",
+    "whatItShips": "What it ships"
+  },
+  "about": {
+    "eyebrow": "About the directory",
+    "metadataDescription": "How Awesome shadcn/ui selects, classifies, and maintains its directory.",
+    "metadataTitle": "About",
+    "reportCorrection": "Report a correction",
+    "sections": {
+      "classification": {
+        "body": "Source access, pricing, delivery type, access requirements, and use cases are summarized from public product information. A project can be free to browse while still selling premium libraries, so source and pricing are intentionally separate.",
+        "heading": "How information is classified"
+      },
+      "corrections": {
+        "body": "The catalog is maintained directly for now and does not accept submissions for new libraries. If an existing entry is wrong, please open a correction issue with the relevant public source.",
+        "heading": "Corrections, not submissions"
+      },
+      "disclaimer": {
+        "body": "Inclusion is based on each project’s own public claims. We do not run installation commands, validate registry contents, or guarantee compatibility. Pricing and licensing can change; use the official site as the source of truth before adopting a library.",
+        "heading": "A necessary disclaimer"
+      },
+      "github": {
+        "body": "Stars and the latest default-branch commit date are stored as a manual snapshot. Libraries without a public repository simply omit those values. Older snapshots are labeled as potentially outdated instead of being presented as live data.",
+        "heading": "GitHub activity"
+      },
+      "scope": {
+        "body": "Awesome shadcn/ui lists UI libraries that publicly describe a way to install their work with the shadcn CLI or a compatible registry. The directory is organized at the library level, not the individual component level.",
+        "heading": "What belongs here"
+      }
+    },
+    "title": "A quieter way to explore the shadcn ecosystem."
+  }
+}

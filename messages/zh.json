@@ -1,0 +1,125 @@
+{
+  "metadata": {
+    "description": "精选收录支持 shadcn CLI 的 UI 组件库目录。",
+    "title": "Awesome shadcn/ui",
+    "titleTemplate": "%s — Awesome shadcn/ui"
+  },
+  "header": {
+    "about": "关于",
+    "github": "在 GitHub 上查看该项目",
+    "navLabel": "主导航"
+  },
+  "localeSwitcher": {
+    "label": "切换语言"
+  },
+  "theme": {
+    "toDark": "切换到深色主题",
+    "toLight": "切换到浅色主题"
+  },
+  "footer": {
+    "methodology": "收录方法",
+    "note": "独立维护,不验证兼容性声明。",
+    "reportCorrection": "提交更正"
+  },
+  "home": {
+    "eyebrow": "精选的 shadcn 生态索引",
+    "subtitle": "在一个安静的目录里,对比组件 registry、定价模式、源码获取方式与项目活跃度。",
+    "title": "找到适合你下一个项目的 UI 库。"
+  },
+  "directory": {
+    "clear": "清除",
+    "clearAllFilters": "清除全部筛选",
+    "clearFilters": "清除筛选",
+    "closeFilters": "关闭筛选",
+    "eyebrow": "浏览目录",
+    "featured": "精选",
+    "filters": "筛选",
+    "filtersLabel": "组件库筛选",
+    "heading": "通过 shadcn CLI 安装的组件库",
+    "noMatch": "没有符合条件的组件库。",
+    "searchLabel": "搜索组件库",
+    "searchPlaceholder": "搜索名称、描述或标签…",
+    "show": "显示 {count} 个",
+    "sort": {
+      "featured": "精选优先",
+      "most-starred": "星标最多",
+      "recently-updated": "最近更新"
+    },
+    "sortLabel": "排序方式",
+    "visit": "访问 {name}"
+  },
+  "filterGroups": {
+    "access": "获取方式",
+    "delivery": "交付形式",
+    "pricing": "定价",
+    "source": "源码",
+    "use": "适用场景"
+  },
+  "metrics": {
+    "lastCommit": "最近提交 {date}",
+    "possiblyOutdated": "可能已过期",
+    "stars": "{count} 星标"
+  },
+  "tags": {
+    "ai": "AI",
+    "blocks": "区块",
+    "commerce": "电商",
+    "components": "组件",
+    "content": "内容",
+    "dashboard": "仪表盘",
+    "data-display": "数据展示",
+    "direct": "直接获取",
+    "free": "免费",
+    "freemium": "免费增值",
+    "login-required": "需登录",
+    "marketing": "营销",
+    "open-source": "开源",
+    "paid": "付费",
+    "proprietary": "专有",
+    "purchase-required": "需购买",
+    "source-available": "源码可用",
+    "templates": "模板",
+    "undisclosed": "未披露"
+  },
+  "libraryDetail": {
+    "access": "获取方式",
+    "added": "收录时间",
+    "backToDirectory": "返回目录",
+    "bestSuitedFor": "适用场景",
+    "pricing": "定价",
+    "snapshot": "GitHub 数据手动快照",
+    "source": "源码",
+    "viewRepository": "查看仓库",
+    "visitSite": "访问官方网站",
+    "whatItShips": "提供内容"
+  },
+  "about": {
+    "eyebrow": "关于本目录",
+    "metadataDescription": "Awesome shadcn/ui 如何筛选、分类并维护这份目录。",
+    "metadataTitle": "关于",
+    "reportCorrection": "提交更正",
+    "sections": {
+      "classification": {
+        "body": "源码获取、定价、交付形式、获取要求与适用场景均整理自公开的产品信息。一个项目可以在免费浏览的同时出售高级库,因此源码与定价有意分开标注。",
+        "heading": "信息如何分类"
+      },
+      "corrections": {
+        "body": "目录目前直接维护,不接受新库投稿。如果已有条目有误,请提交更正 issue 并附上相关公开来源。",
+        "heading": "只接受更正,不接受投稿"
+      },
+      "disclaimer": {
+        "body": "收录基于各项目自己的公开声明。我们不会运行安装命令、验证 registry 内容,也不保证兼容性。定价与授权可能变化;在采用某个库之前,请以官方网站为准。",
+        "heading": "必要的声明"
+      },
+      "github": {
+        "body": "星标数与默认分支的最近提交日期以手动快照形式保存。没有公开仓库的库会省略这些数值。较旧的快照会标注为可能过期,而非当作实时数据呈现。",
+        "heading": "GitHub 活跃度"
+      },
+      "scope": {
+        "body": "Awesome shadcn/ui 收录公开说明可用 shadcn CLI 或兼容 registry 安装的 UI 库。目录以库为单位组织,而非单个组件。",
+        "heading": "收录标准"
+      }
+    },
+    "title": "一种更安静的方式,探索 shadcn 生态。"
+  }
+}

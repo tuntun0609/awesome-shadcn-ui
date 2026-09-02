@@ -1,9 +1,11 @@
 "use client";
 
 import { Moon, Sun } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
 export function ThemeToggle() {
+  const t = useTranslations("theme");
   const [dark, setDark] = useState(false);
 
   useEffect(() => {
@@ -25,7 +27,7 @@ export function ThemeToggle() {
 
   return (
     <button
-      aria-label={`Switch to ${dark ? "light" : "dark"} theme`}
+      aria-label={dark ? t("toLight") : t("toDark")}
       className="nav-link px-2"
       onClick={toggle}
       type="button"
