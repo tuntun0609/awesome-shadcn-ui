@@ -390,7 +390,7 @@ export function LibraryDirectory({
 
               <a
                 aria-label={`Visit ${library.name}`}
-                className="inline-flex size-9 items-center justify-center rounded-lg border text-muted-foreground transition-[color,border-color,transform] hover:-translate-y-0.5 hover:border-blue-500/50 hover:text-blue-600 sm:justify-self-end dark:hover:text-blue-400"
+                className="inline-flex size-9 items-center justify-center rounded-lg border text-muted-foreground transition-[color,border-color] hover:border-blue-500/50 hover:text-blue-600 sm:justify-self-end dark:hover:text-blue-400"
                 href={library.website}
                 rel="noreferrer"
                 target="_blank"
