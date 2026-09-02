@@ -1,4 +1,5 @@
 import { Code2 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -7,14 +8,24 @@ export const repositoryUrl = "https://github.com/tuntun0609/awesome-shadcn-ui";
 export function SiteHeader() {
   return (
     <header className="flex h-16 items-center justify-between border-border border-b">
-      <Link
-        className="inline-flex items-center gap-2 font-semibold text-sm"
-        href="/"
-      >
-        <span className="flex size-6 items-center justify-center rounded-md bg-foreground font-mono text-[10px] text-background">
-          A/
+      <Link className="inline-flex items-center gap-2.5" href="/">
+        <Image
+          alt=""
+          aria-hidden="true"
+          className="h-7 w-auto shrink-0"
+          height={853}
+          src="/logo.svg"
+          unoptimized
+          width={878}
+        />
+        <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
+          <span className="font-heading font-semibold text-base leading-none">
+            Awesome
+          </span>
+          <span className="font-medium font-mono text-[11px] text-muted-foreground tracking-tight">
+            shadcn/ui
+          </span>
         </span>
-        Awesome shadcn/ui
       </Link>
       <nav aria-label="Primary navigation" className="flex items-center gap-1">
         <Link className="nav-link" href="/about">

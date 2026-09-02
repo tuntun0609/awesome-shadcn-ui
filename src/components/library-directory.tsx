@@ -250,21 +250,13 @@ export function LibraryDirectory({
   return (
     <section aria-labelledby="directory-title" className="pb-24">
       <div className="pb-5">
-        <div className="flex items-end justify-between gap-6">
-          <div>
-            <p className="font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
-              Browse the directory
-            </p>
-            <h2 className="mt-2 font-medium text-xl" id="directory-title">
-              Libraries that ship through the shadcn CLI
-            </h2>
-          </div>
-          <p
-            aria-live="polite"
-            className="shrink-0 font-mono text-muted-foreground text-xs"
-          >
-            {visibleLibraries.length} / {libraries.length}
+        <div>
+          <p className="font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em]">
+            Browse the directory
           </p>
+          <h2 className="mt-2 font-medium text-xl" id="directory-title">
+            Libraries that ship through the shadcn CLI
+          </h2>
         </div>
 
         <div className="mt-7 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto]">
