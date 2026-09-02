@@ -35,6 +35,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatAdminDate } from "@/lib/admin-date";
 import {
   LIBRARY_ACCESS_OPTIONS,
   LIBRARY_PRICING_OPTIONS,
@@ -143,7 +144,9 @@ export function LibraryTable({ data }: { data: LibraryListRow[] }) {
     {
       accessorKey: "addedAt",
       cell: ({ row }) => (
-        <span className="tabular-nums">{row.original.addedAt}</span>
+        <span className="tabular-nums">
+          {formatAdminDate(row.original.addedAt)}
+        </span>
       ),
       header: ({ column }) => (
         <SortableHeader column={column}>收录日期</SortableHeader>
@@ -153,7 +156,7 @@ export function LibraryTable({ data }: { data: LibraryListRow[] }) {
       accessorKey: "updatedAt",
       cell: ({ row }) => (
         <span className="text-muted-foreground tabular-nums">
-          {row.original.updatedAt}
+          {formatAdminDate(row.original.updatedAt)}
         </span>
       ),
       header: ({ column }) => (
@@ -166,6 +169,7 @@ export function LibraryTable({ data }: { data: LibraryListRow[] }) {
           {row.original.website ? (
             <Button
               aria-label={`访问 ${row.original.name} 官网`}
+              nativeButton={false}
               render={
                 <a
                   href={row.original.website}
@@ -180,6 +184,7 @@ export function LibraryTable({ data }: { data: LibraryListRow[] }) {
           ) : null}
           <Button
             aria-label={`编辑 ${row.original.name}`}
+            nativeButton={false}
             render={<Link href={`/admin/libraries/${row.original.id}`} />}
             size="icon-sm"
             variant="ghost"

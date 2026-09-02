@@ -401,7 +401,11 @@ export function LibraryForm({
       </Card>
 
       <div className="flex items-center justify-end gap-3">
-        <Button render={<Link href="/admin" />} variant="outline">
+        <Button
+          nativeButton={false}
+          render={<Link href="/admin" />}
+          variant="outline"
+        >
           返回列表
         </Button>
         <Button disabled={isSubmitting} type="submit">

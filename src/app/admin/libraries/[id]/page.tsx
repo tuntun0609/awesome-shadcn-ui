@@ -21,6 +21,7 @@ import {
   libraryTags,
   libraryUseCases,
 } from "@/db/schema";
+import { formatAdminDate } from "@/lib/admin-date";
 import type { LibraryFormInput } from "@/lib/library-form-schema";
 
 export const dynamic = "force-dynamic";
@@ -101,6 +102,7 @@ export default async function EditLibraryPage({
       <div className="flex items-center gap-3">
         <Button
           aria-label="返回列表"
+          nativeButton={false}
           render={<Link href="/admin" />}
           size="icon-sm"
           variant="ghost"
@@ -112,6 +114,7 @@ export default async function EditLibraryPage({
         </h1>
         <div className="ml-auto flex items-center gap-2">
           <Button
+            nativeButton={false}
             render={
               <Link
                 href={`/libraries/${library.slug}`}
@@ -150,13 +153,15 @@ export default async function EditLibraryPage({
             <span className="text-muted-foreground">
               最近提交：
               <span className="font-medium text-foreground tabular-nums">
-                {metrics.latestCommitAt ?? "未知"}
+                {metrics.latestCommitAt
+                  ? formatAdminDate(metrics.latestCommitAt)
+                  : "未知"}
               </span>
             </span>
             <span className="text-muted-foreground">
               同步时间：
               <span className="font-medium text-foreground tabular-nums">
-                {metrics.syncedAt}
+                {formatAdminDate(metrics.syncedAt)}
               </span>
             </span>
           </CardContent>
