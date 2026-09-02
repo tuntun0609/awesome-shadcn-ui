@@ -34,6 +34,33 @@
       "react": "recommended"
     }
   },
+  "overrides": [
+    {
+      "includes": ["src/components/ui/**", "src/hooks/use-mobile.ts"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "noLabelWithoutControl": "off"
+          },
+          "correctness": {
+            "useExhaustiveDependencies": "off"
+          },
+          "performance": {
+            "noJsxPropsBind": "off",
+            "noNamespaceImport": "off"
+          },
+          "style": {
+            "useConsistentTypeDefinitions": "off"
+          },
+          "suspicious": {
+            "noDocumentCookie": "off",
+            "noLeakedRender": "off",
+            "noShadow": "off"
+          }
+        }
+      }
+    }
+  ],
   "assist": {
     "actions": {
       "source": {
