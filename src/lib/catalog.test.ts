@@ -1,12 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  accessModels,
-  deliveryTypes,
-  libraries,
-  pricingModels,
-  sourceModels,
-  useCases,
-} from "../data/libraries";
+import { seedLibraries } from "../../scripts/fixtures/catalog";
 import {
   type CatalogFilters,
   filterLibraries,
@@ -14,6 +7,13 @@ import {
   type GithubSnapshot,
   sortLibraries,
 } from "./catalog";
+import {
+  accessModels,
+  deliveryTypes,
+  pricingModels,
+  sourceModels,
+  useCases,
+} from "./catalog-model";
 
 const emptyFilters: CatalogFilters = {
   access: [],
@@ -26,6 +26,7 @@ const emptyFilters: CatalogFilters = {
 
 const emptyMetrics: GithubSnapshot = { repositories: {}, syncedAt: null };
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const libraries = seedLibraries;
 
 describe("catalog filtering", () => {
   test("uses OR within a dimension and AND across dimensions", () => {

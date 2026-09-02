@@ -2,11 +2,13 @@ import { Suspense } from "react";
 import { LibraryDirectory } from "@/components/library-directory";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import metrics from "@/data/github-metrics.json";
-import { libraries } from "@/data/libraries";
-import type { GithubSnapshot } from "@/lib/catalog";
+import { getCatalog } from "@/db/catalog-data";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const { libraries, metrics } = await getCatalog();
+
   return (
     <main>
       <div className="mx-auto w-full max-w-[1080px] px-5 sm:px-8">
@@ -26,10 +28,7 @@ export default function Home() {
           </p>
         </section>
         <Suspense fallback={<div className="min-h-[460px] border-t" />}>
-          <LibraryDirectory
-            libraries={libraries}
-            metrics={metrics as GithubSnapshot}
-          />
+          <LibraryDirectory libraries={libraries} metrics={metrics} />
         </Suspense>
         <SiteFooter />
       </div>

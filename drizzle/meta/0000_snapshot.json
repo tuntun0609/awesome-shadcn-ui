@@ -1,0 +1,434 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "6e346b7c-f418-4156-a689-0b9a34474b72",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "tables": {
+    "github_metrics": {
+      "name": "github_metrics",
+      "columns": {
+        "latest_commit_at": {
+          "name": "latest_commit_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "library_id": {
+          "name": "library_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "stars": {
+          "name": "stars",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "synced_at": {
+          "name": "synced_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "github_metrics_stars_idx": {
+          "name": "github_metrics_stars_idx",
+          "columns": ["stars"],
+          "isUnique": false
+        },
+        "github_metrics_latest_commit_at_idx": {
+          "name": "github_metrics_latest_commit_at_idx",
+          "columns": ["latest_commit_at"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "github_metrics_library_id_libraries_id_fk": {
+          "name": "github_metrics_library_id_libraries_id_fk",
+          "tableFrom": "github_metrics",
+          "tableTo": "libraries",
+          "columnsFrom": ["library_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "github_metrics_stars_check": {
+          "name": "github_metrics_stars_check",
+          "value": "\"github_metrics\".\"stars\" >= 0"
+        },
+        "github_metrics_latest_commit_at_check": {
+          "name": "github_metrics_latest_commit_at_check",
+          "value": "\"github_metrics\".\"latest_commit_at\" is null or datetime(\"github_metrics\".\"latest_commit_at\") is not null"
+        },
+        "github_metrics_synced_at_check": {
+          "name": "github_metrics_synced_at_check",
+          "value": "datetime(\"github_metrics\".\"synced_at\") is not null"
+        }
+      }
+    },
+    "libraries": {
+      "name": "libraries",
+      "columns": {
+        "access": {
+          "name": "access",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "added_at": {
+          "name": "added_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "featured_rank": {
+          "name": "featured_rank",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "github": {
+          "name": "github",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "logo": {
+          "name": "logo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "pricing": {
+          "name": "pricing",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "website": {
+          "name": "website",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "libraries_slug_unique": {
+          "name": "libraries_slug_unique",
+          "columns": ["slug"],
+          "isUnique": true
+        },
+        "libraries_featured_rank_unique": {
+          "name": "libraries_featured_rank_unique",
+          "columns": ["featured_rank"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "libraries_slug_check": {
+          "name": "libraries_slug_check",
+          "value": "length(\"libraries\".\"slug\") > 0\n        and \"libraries\".\"slug\" not glob '*[^a-z0-9-]*'\n        and \"libraries\".\"slug\" not like '-%'\n        and \"libraries\".\"slug\" not like '%-'\n        and \"libraries\".\"slug\" not like '%--%'"
+        },
+        "libraries_source_check": {
+          "name": "libraries_source_check",
+          "value": "\"libraries\".\"source\" in ('open-source', 'source-available', 'proprietary', 'undisclosed')"
+        },
+        "libraries_pricing_check": {
+          "name": "libraries_pricing_check",
+          "value": "\"libraries\".\"pricing\" in ('free', 'freemium', 'paid', 'undisclosed')"
+        },
+        "libraries_access_check": {
+          "name": "libraries_access_check",
+          "value": "\"libraries\".\"access\" in ('direct', 'login-required', 'purchase-required', 'undisclosed')"
+        },
+        "libraries_added_at_check": {
+          "name": "libraries_added_at_check",
+          "value": "length(\"libraries\".\"added_at\") = 10\n        and \"libraries\".\"added_at\" glob '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'\n        and date(\"libraries\".\"added_at\") = \"libraries\".\"added_at\""
+        },
+        "libraries_featured_rank_check": {
+          "name": "libraries_featured_rank_check",
+          "value": "\"libraries\".\"featured_rank\" is null or \"libraries\".\"featured_rank\" > 0"
+        }
+      }
+    },
+    "library_deliveries": {
+      "name": "library_deliveries",
+      "columns": {
+        "library_id": {
+          "name": "library_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "library_deliveries_position_unique": {
+          "name": "library_deliveries_position_unique",
+          "columns": ["library_id", "position"],
+          "isUnique": true
+        },
+        "library_deliveries_value_idx": {
+          "name": "library_deliveries_value_idx",
+          "columns": ["value"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "library_deliveries_library_id_libraries_id_fk": {
+          "name": "library_deliveries_library_id_libraries_id_fk",
+          "tableFrom": "library_deliveries",
+          "tableTo": "libraries",
+          "columnsFrom": ["library_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "library_deliveries_library_id_value_pk": {
+          "columns": ["library_id", "value"],
+          "name": "library_deliveries_library_id_value_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "library_deliveries_value_check": {
+          "name": "library_deliveries_value_check",
+          "value": "\"library_deliveries\".\"value\" in ('components', 'blocks', 'templates')"
+        },
+        "library_deliveries_position_check": {
+          "name": "library_deliveries_position_check",
+          "value": "\"library_deliveries\".\"position\" >= 0"
+        }
+      }
+    },
+    "library_tags": {
+      "name": "library_tags",
+      "columns": {
+        "library_id": {
+          "name": "library_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "library_tags_position_unique": {
+          "name": "library_tags_position_unique",
+          "columns": ["library_id", "position"],
+          "isUnique": true
+        },
+        "library_tags_value_idx": {
+          "name": "library_tags_value_idx",
+          "columns": ["value"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "library_tags_library_id_libraries_id_fk": {
+          "name": "library_tags_library_id_libraries_id_fk",
+          "tableFrom": "library_tags",
+          "tableTo": "libraries",
+          "columnsFrom": ["library_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "library_tags_library_id_value_pk": {
+          "columns": ["library_id", "value"],
+          "name": "library_tags_library_id_value_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "library_tags_value_check": {
+          "name": "library_tags_value_check",
+          "value": "length(trim(\"library_tags\".\"value\")) > 0"
+        },
+        "library_tags_position_check": {
+          "name": "library_tags_position_check",
+          "value": "\"library_tags\".\"position\" >= 0"
+        }
+      }
+    },
+    "library_use_cases": {
+      "name": "library_use_cases",
+      "columns": {
+        "library_id": {
+          "name": "library_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "library_use_cases_position_unique": {
+          "name": "library_use_cases_position_unique",
+          "columns": ["library_id", "position"],
+          "isUnique": true
+        },
+        "library_use_cases_value_idx": {
+          "name": "library_use_cases_value_idx",
+          "columns": ["value"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "library_use_cases_library_id_libraries_id_fk": {
+          "name": "library_use_cases_library_id_libraries_id_fk",
+          "tableFrom": "library_use_cases",
+          "tableTo": "libraries",
+          "columnsFrom": ["library_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "library_use_cases_library_id_value_pk": {
+          "columns": ["library_id", "value"],
+          "name": "library_use_cases_library_id_value_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "library_use_cases_value_check": {
+          "name": "library_use_cases_value_check",
+          "value": "\"library_use_cases\".\"value\" in ('marketing', 'dashboard', 'commerce', 'content', 'data-display', 'ai')"
+        },
+        "library_use_cases_position_check": {
+          "name": "library_use_cases_position_check",
+          "value": "\"library_use_cases\".\"position\" >= 0"
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

@@ -1,15 +1,6 @@
-import type { Library } from "@/data/libraries";
+import type { GithubSnapshot, Library } from "@/lib/catalog-model";
 
-export interface GithubMetric {
-  latestCommitAt: string | null;
-  stars: number;
-  syncedAt: string;
-}
-
-export interface GithubSnapshot {
-  repositories: Record<string, GithubMetric>;
-  syncedAt: string | null;
-}
+export type { GithubMetric, GithubSnapshot } from "@/lib/catalog-model";
 
 export type CatalogSort = "featured" | "recently-updated" | "most-starred";
 

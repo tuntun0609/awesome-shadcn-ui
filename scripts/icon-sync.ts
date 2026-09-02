@@ -1,7 +1,7 @@
 import { mkdir, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname, extname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { libraries } from "../src/data/libraries";
+import { readCatalog } from "../src/db/catalog-repository";
 
 export interface IconSyncTarget {
   github?: string;
@@ -587,6 +587,7 @@ export async function syncIcons(
 }
 
 async function run() {
+  const { libraries } = await readCatalog();
   const targets = libraries.flatMap((library) =>
     library.logo
       ? [

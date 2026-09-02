@@ -1,17 +1,9 @@
-import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { libraries } from "../src/data/libraries";
+import { readCatalog, writeGithubSnapshot } from "../src/db/catalog-repository";
+import type { GithubMetric, GithubSnapshot } from "../src/lib/catalog-model";
 
-export interface RepositoryMetric {
-  latestCommitAt: string | null;
-  stars: number;
-  syncedAt: string;
-}
-
-export interface MetricsSnapshot {
-  repositories: Record<string, RepositoryMetric>;
-  syncedAt: string | null;
-}
+export type RepositoryMetric = GithubMetric;
+export type MetricsSnapshot = GithubSnapshot;
 
 interface SyncTarget {
   github: string;
@@ -93,22 +85,12 @@ export async function syncRepositories(
 }
 
 async function run() {
-  const outputPath = fileURLToPath(
-    new URL("../src/data/github-metrics.json", import.meta.url)
-  );
-  let previous: MetricsSnapshot = { repositories: {}, syncedAt: null };
-  try {
-    previous = JSON.parse(
-      await readFile(outputPath, "utf8")
-    ) as MetricsSnapshot;
-  } catch {
-    // A missing snapshot is expected on the first sync.
-  }
-  const targets = libraries.flatMap((library) =>
+  const catalog = await readCatalog();
+  const targets = catalog.libraries.flatMap((library) =>
     library.github ? [{ github: library.github, slug: library.slug }] : []
   );
-  const result = await syncRepositories(targets, previous);
-  await writeFile(outputPath, `${JSON.stringify(result.snapshot, null, 2)}\n`);
+  const result = await syncRepositories(targets, catalog.metrics);
+  await writeGithubSnapshot(result.snapshot);
 
   console.log(
     `Synced ${Object.keys(result.snapshot.repositories).length}/${targets.length} repositories.`

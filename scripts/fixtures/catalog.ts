@@ -1,59 +1,6 @@
-export const sourceModels = [
-  "open-source",
-  "source-available",
-  "proprietary",
-  "undisclosed",
-] as const;
+import type { GithubSnapshot, Library } from "../../src/lib/catalog-model";
 
-export const pricingModels = [
-  "free",
-  "freemium",
-  "paid",
-  "undisclosed",
-] as const;
-
-export const accessModels = [
-  "direct",
-  "login-required",
-  "purchase-required",
-  "undisclosed",
-] as const;
-
-export const deliveryTypes = ["components", "blocks", "templates"] as const;
-
-export const useCases = [
-  "marketing",
-  "dashboard",
-  "commerce",
-  "content",
-  "data-display",
-  "ai",
-] as const;
-
-export type SourceModel = (typeof sourceModels)[number];
-export type PricingModel = (typeof pricingModels)[number];
-export type AccessModel = (typeof accessModels)[number];
-export type DeliveryType = (typeof deliveryTypes)[number];
-export type UseCase = (typeof useCases)[number];
-
-export interface Library {
-  access: AccessModel;
-  addedAt: string;
-  delivery: DeliveryType[];
-  description: string;
-  featuredRank?: number;
-  github?: string;
-  logo?: string;
-  name: string;
-  pricing: PricingModel;
-  slug: string;
-  source: SourceModel;
-  tags: string[];
-  useCases: UseCase[];
-  website: string;
-}
-
-export const libraries = [
+export const seedLibraries = [
   {
     access: "direct",
     addedAt: "2026-09-01",
@@ -249,3 +196,54 @@ export const libraries = [
     website: "https://reactbits.dev/get-started/introduction",
   },
 ] satisfies Library[];
+
+export const seedGithubSnapshot = {
+  repositories: {
+    "animate-ui": {
+      latestCommitAt: "2025-12-31T12:51:05Z",
+      stars: 4238,
+      syncedAt: "2026-09-01T09:49:50.646Z",
+    },
+    beui: {
+      latestCommitAt: "2026-08-31T17:22:53Z",
+      stars: 1376,
+      syncedAt: "2026-09-01T09:49:50.646Z",
+    },
+    "coss-ui": {
+      latestCommitAt: "2026-08-31T08:53:47Z",
+      stars: 10_517,
+      syncedAt: "2026-09-01T09:49:50.646Z",
+    },
+    "dice-ui": {
+      latestCommitAt: "2026-08-28T02:46:30Z",
+      stars: 2062,
+      syncedAt: "2026-09-01T09:49:50.646Z",
+    },
+    "kibo-ui": {
+      latestCommitAt: "2026-05-04T06:00:08Z",
+      stars: 3916,
+      syncedAt: "2026-09-01T09:49:50.646Z",
+    },
+    "kokonut-ui": {
+      latestCommitAt: "2026-08-20T07:52:23Z",
+      stars: 2067,
+      syncedAt: "2026-09-01T09:49:50.646Z",
+    },
+    "magic-ui": {
+      latestCommitAt: "2026-08-11T14:09:34Z",
+      stars: 22_124,
+      syncedAt: "2026-09-01T09:49:50.646Z",
+    },
+    "react-bits": {
+      latestCommitAt: "2026-08-31T12:34:00Z",
+      stars: 46_560,
+      syncedAt: "2026-09-01T09:49:50.646Z",
+    },
+    reui: {
+      latestCommitAt: "2026-08-20T05:19:32Z",
+      stars: 3415,
+      syncedAt: "2026-09-01T09:49:50.646Z",
+    },
+  },
+  syncedAt: "2026-09-01T09:49:50.646Z",
+} satisfies GithubSnapshot;

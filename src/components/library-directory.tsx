@@ -21,23 +21,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Library } from "@/data/libraries";
-import {
-  accessModels,
-  deliveryTypes,
-  pricingModels,
-  sourceModels,
-  useCases,
-} from "@/data/libraries";
 import {
   type CatalogFilters,
   type CatalogSort,
   filterLibraries,
   formatCommitDate,
   formatCompactNumber,
-  type GithubSnapshot,
   sortLibraries,
 } from "@/lib/catalog";
+import {
+  accessModels,
+  deliveryTypes,
+  type GithubSnapshot,
+  type Library,
+  pricingModels,
+  sourceModels,
+  useCases,
+} from "@/lib/catalog-model";
 import { cn } from "@/lib/utils";
 
 interface LibraryDirectoryProps {

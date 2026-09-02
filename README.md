@@ -7,23 +7,44 @@ shadcn CLI or a compatible registry.
 
 ```bash
 bun install
+bun run db:migrate
+bun run db:seed
 bun run dev
 ```
+
+The default database is `file:local.db`, which is ignored by Git. Copy
+`.env.example` to `.env.local` to use another local file or a remote Turso
+database. Runtime database access uses `TURSO_DATABASE_URL` and, for remote
+`libsql://` URLs, `TURSO_AUTH_TOKEN`.
 
 Useful checks:
 
 ```bash
 bun run check
 bun test
+bun run db:check
 bun run build
 ```
 
 ## Maintaining the catalog
 
-Library records live in [`src/data/libraries.ts`](src/data/libraries.ts). Add or
-edit entries there; the schema, enum values, URLs, and duplicate slugs are
-covered by tests. A public GitHub repository is optional. If it is omitted,
-stars and commit activity are not shown.
+Turso/libSQL is the runtime source of truth. Drizzle schema and migrations live
+in `src/db/schema.ts` and `drizzle/`. The bootstrap fixture in
+`scripts/fixtures/catalog.ts` initializes an empty database but is never read by
+the application. This phase intentionally provides no catalog editing UI or
+routine mutation CLI. `bun run db:studio` is available for local inspection.
+
+Create and apply reviewed migrations with:
+
+```bash
+bun run db:generate
+bun run db:check
+bun run db:migrate
+```
+
+Set Turso credentials and use `bun run db:migrate:turso` to migrate a remote
+database. Apply production migrations once in a serialized deployment step;
+do not run migrations from every application instance.
 
 Refresh GitHub snapshots manually when needed:
 
@@ -31,10 +52,10 @@ Refresh GitHub snapshots manually when needed:
 bun run sync:github
 ```
 
-The script reads every configured repository and writes
-`src/data/github-metrics.json`. Set `GITHUB_TOKEN` to reduce the chance of API
-rate limiting. Failed requests retain the previous snapshot when one exists.
-There is no scheduled job or automatic data collection.
+The script reads repository URLs from the database and updates the current
+metric rows in place. Set `GITHUB_TOKEN` to reduce the chance of API rate
+limiting. Failed requests retain the previous database value when one exists.
+There is no scheduled job or metric history.
 
 ## Inclusion policy
 
@@ -48,6 +69,9 @@ Issues are available only for corrections to existing entries.
 
 ## Deployment
 
-The site is a standard Next.js application and is ready for Vercel. Set
-`NEXT_PUBLIC_SITE_URL` to the production origin so metadata, `robots.txt`, and
-the sitemap use the correct canonical host.
+The site is a standard Node.js Next.js application and is not tied to a hosting
+provider. Set `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, and
+`NEXT_PUBLIC_SITE_URL` in the runtime environment. Public routes query the
+database at request time through a five-minute server cache, so `next build`
+does not require database credentials. Database failures are surfaced rather
+than hidden behind a static fallback.

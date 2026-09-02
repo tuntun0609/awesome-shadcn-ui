@@ -11,13 +11,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import metricsData from "@/data/github-metrics.json";
-import { libraries } from "@/data/libraries";
-import {
-  formatCommitDate,
-  formatCompactNumber,
-  type GithubSnapshot,
-} from "@/lib/catalog";
+import { getCatalogEntry } from "@/db/catalog-data";
+import { formatCommitDate, formatCompactNumber } from "@/lib/catalog";
+
+export const dynamic = "force-dynamic";
 
 const labels: Record<string, string> = {
   ai: "AI",
@@ -41,22 +38,18 @@ const labels: Record<string, string> = {
   undisclosed: "Undisclosed",
 };
 
-export function generateStaticParams() {
-  return libraries.map((library) => ({ slug: library.slug }));
-}
-
 export async function generateMetadata({
   params,
 }: PageProps<"/libraries/[slug]">): Promise<Metadata> {
   const { slug } = await params;
-  const library = libraries.find((item) => item.slug === slug);
-  if (!library) {
+  const entry = await getCatalogEntry(slug);
+  if (!entry) {
     return {};
   }
   return {
-    description: library.description,
+    description: entry.library.description,
     openGraph: { images: [] },
-    title: library.name,
+    title: entry.library.name,
     twitter: { images: [] },
   };
 }
@@ -65,12 +58,11 @@ export default async function LibraryPage({
   params,
 }: PageProps<"/libraries/[slug]">) {
   const { slug } = await params;
-  const library = libraries.find((item) => item.slug === slug);
-  if (!library) {
+  const entry = await getCatalogEntry(slug);
+  if (!entry) {
     notFound();
   }
-  const metrics = metricsData as GithubSnapshot;
-  const metric = metrics.repositories[library.slug];
+  const { library, metric } = entry;
 
   return (
     <main>
