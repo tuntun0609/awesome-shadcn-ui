@@ -14,6 +14,7 @@ export default function NewLibraryPage() {
       <div className="flex items-center gap-3">
         <Button
           aria-label="返回列表"
+          nativeButton={false}
           render={<Link href="/admin" />}
           size="icon-sm"
           variant="ghost"
