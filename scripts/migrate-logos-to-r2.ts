@@ -4,9 +4,9 @@ import { fileURLToPath } from "node:url";
 import { eq } from "drizzle-orm";
 import { createDatabase } from "../src/db/client";
 import { libraries } from "../src/db/schema";
+import { isSupportedIcon } from "../src/lib/icon-resolver";
 import { detectIconFormat, iconContentType } from "../src/lib/icon-validation";
 import { LOGO_KEY_PREFIX, uploadR2Object } from "../src/lib/r2";
-import { isSupportedIcon } from "./icon-sync";
 
 const MIGRATED_PREFIX = "awesome-shadcn-ui/icons/";
 const LOGO_LEADING_SLASHES = /^\/+/;

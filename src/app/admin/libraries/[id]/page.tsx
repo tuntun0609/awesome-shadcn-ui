@@ -1,12 +1,12 @@
 import { asc, eq } from "drizzle-orm";
-import { ArrowLeftIcon, ExternalLinkIcon, StarIcon } from "lucide-react";
+import { ArrowLeftIcon, ExternalLinkIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DeleteLibraryButton } from "@/components/admin/delete-library-button";
+import { GithubMetricsCard } from "@/components/admin/github-metrics-card";
 import { LibraryForm } from "@/components/admin/library-form";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { getDatabase } from "@/db/client";
 import {
   githubMetrics,
@@ -15,7 +15,6 @@ import {
   libraryTags,
   libraryUseCases,
 } from "@/db/schema";
-import { formatAdminDate } from "@/lib/admin-date";
 import type { LibraryFormInput } from "@/lib/library-form-schema";
 
 export const dynamic = "force-dynamic";
@@ -130,37 +129,19 @@ export default async function EditLibraryPage({
         </div>
       </div>
 
-      {metrics ? (
-        <Card>
-          <CardContent className="flex flex-col gap-x-8 gap-y-1.5 py-4 text-sm sm:flex-row sm:flex-wrap sm:items-center">
-            <span className="flex items-center gap-1.5 font-medium">
-              <StarIcon className="size-4 text-amber-500" />
-              GitHub 指标
-            </span>
-            <span className="flex items-center gap-1.5 tabular-nums">
-              Stars：
-              <span className="font-medium">{metrics.stars}</span>
-            </span>
-            <span className="text-muted-foreground">
-              最近提交：
-              <span className="font-medium text-foreground tabular-nums">
-                {metrics.latestCommitAt
-                  ? formatAdminDate(metrics.latestCommitAt)
-                  : "未知"}
-              </span>
-            </span>
-            <span className="text-muted-foreground">
-              同步时间：
-              <span className="font-medium text-foreground tabular-nums">
-                {formatAdminDate(metrics.syncedAt)}
-              </span>
-            </span>
-            <span className="text-muted-foreground sm:ml-auto">
-              由 <code>sync:github</code> 自动同步，只读
-            </span>
-          </CardContent>
-        </Card>
-      ) : null}
+      <GithubMetricsCard
+        github={library.github ?? ""}
+        libraryId={library.id}
+        metric={
+          metrics
+            ? {
+                latestCommitAt: metrics.latestCommitAt,
+                stars: metrics.stars,
+                syncedAt: metrics.syncedAt,
+              }
+            : null
+        }
+      />
 
       <LibraryForm
         defaultValues={{

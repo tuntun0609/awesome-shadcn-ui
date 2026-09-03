@@ -11,10 +11,18 @@ import {
   libraryTags,
   libraryUseCases,
 } from "@/db/schema";
+import { fetchGithubMetrics } from "@/lib/github-metrics-fetcher";
+import {
+  type IconSourceTarget,
+  LOGO_UPLOAD_ACCEPTANCE,
+  resolveIcon,
+} from "@/lib/icon-resolver";
+import { detectIconFormat, iconContentType } from "@/lib/icon-validation";
 import {
   type LibraryFormValues,
   libraryFormSchema,
   slugSchema,
+  urlSchema,
 } from "@/lib/library-form-schema";
 import { uploadLibraryLogo } from "@/lib/r2";
 
@@ -223,6 +231,129 @@ export async function uploadLibraryLogoAction(
         logo: error instanceof Error ? error.message : "Logo 上传失败",
       },
     };
+  }
+}
+
+export interface LogoFetchState {
+  base64?: string;
+  contentType?: string;
+  filename?: string;
+  message?: string;
+  sourceUrl?: string;
+}
+
+const logoFetchInputSchema = z.object({
+  github: z.union([urlSchema, z.literal("")]),
+  website: urlSchema,
+});
+
+/** 从组件库官网（或其 GitHub 仓库）自动采集 Logo 字节，供后台预览确认后随表单一起上传。 */
+export async function fetchLibraryLogoAction(
+  website: string,
+  github: string
+): Promise<LogoFetchState> {
+  const parsed = logoFetchInputSchema.safeParse({ github, website });
+  if (!parsed.success) {
+    return { message: parsed.error.issues[0]?.message ?? "官网地址无效" };
+  }
+
+  try {
+    const target: IconSourceTarget = {
+      github: parsed.data.github === "" ? undefined : parsed.data.github,
+      website: parsed.data.website,
+    };
+    const resolution = await resolveIcon(target, fetch, LOGO_UPLOAD_ACCEPTANCE);
+    if (!resolution.ok) {
+      return {
+        message: `未采集到可用的 Logo：${resolution.failures.join("；")}`,
+      };
+    }
+
+    const { bytes, sourceUrl } = resolution.asset;
+    const format = detectIconFormat(bytes);
+    if (!format) {
+      return { message: "采集到的图标格式无法识别" };
+    }
+    return {
+      base64: Buffer.from(bytes).toString("base64"),
+      contentType: iconContentType(format),
+      filename: `logo.${format}`,
+      sourceUrl,
+    };
+  } catch (error) {
+    return {
+      message: `Logo 采集失败：${error instanceof Error ? error.message : "未知错误"}`,
+    };
+  }
+}
+
+export interface GithubMetricsFetchState {
+  latestCommitAt?: string | null;
+  message?: string;
+  stars?: number;
+  syncedAt?: string;
+}
+
+const githubMetricsFetchInputSchema = z.object({
+  github: urlSchema,
+});
+
+/** 从 GitHub API 自动采集单个仓库的指标（Stars / 最近提交），供后台预览确认后入库。 */
+export async function fetchGithubMetricsAction(
+  github: string
+): Promise<GithubMetricsFetchState> {
+  const parsed = githubMetricsFetchInputSchema.safeParse({ github });
+  if (!parsed.success) {
+    return { message: parsed.error.issues[0]?.message ?? "GitHub 地址无效" };
+  }
+
+  try {
+    return await fetchGithubMetrics(parsed.data.github);
+  } catch (error) {
+    return {
+      message: `GitHub 指标采集失败：${error instanceof Error ? error.message : "未知错误"}`,
+    };
+  }
+}
+
+const githubMetricsSaveInputSchema = z.object({
+  latestCommitAt: z.union([z.iso.datetime(), z.null()]),
+  libraryId: z.number().int().positive(),
+  stars: z.number().int().nonnegative(),
+  syncedAt: z.iso.datetime(),
+});
+
+/** 将后台确认后的 GitHub 指标以单条 upsert 方式写入（不影响其他组件库的快照）。 */
+export async function saveGithubMetricsAction(
+  libraryId: number,
+  metric: { latestCommitAt: string | null; stars: number; syncedAt: string }
+): Promise<LibraryActionState> {
+  const parsed = githubMetricsSaveInputSchema.safeParse({
+    ...metric,
+    libraryId,
+  });
+  if (!parsed.success) {
+    return {
+      message: parsed.error.issues[0]?.message ?? "无效的 GitHub 指标数据",
+    };
+  }
+
+  const db = await getDatabase();
+  try {
+    const { latestCommitAt, stars, syncedAt } = parsed.data;
+    await db
+      .insert(githubMetrics)
+      .values({ latestCommitAt, libraryId, stars, syncedAt })
+      .onConflictDoUpdate({
+        set: { latestCommitAt, stars, syncedAt },
+        target: githubMetrics.libraryId,
+      });
+    refreshAdminData();
+    return {};
+  } catch (error) {
+    return (
+      translateConstraintError(error) ?? { message: "保存失败，请稍后重试" }
+    );
   }
 }
 

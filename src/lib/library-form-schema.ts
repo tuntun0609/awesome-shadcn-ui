@@ -59,6 +59,9 @@ const urlSchema = z
   );
 
 const optionalUrlSchema = z.union([urlSchema, z.literal("")]);
+
+export { urlSchema };
+
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const LOGO_KEY_PATTERN =
   /^awesome-shadcn-ui\/icons\/[a-z0-9]+(-[a-z0-9]+)*\.(ico|png|svg|webp)$/;

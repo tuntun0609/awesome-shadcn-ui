@@ -6,7 +6,7 @@ import { SaveIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import {
   createLibraryAction,
@@ -15,6 +15,7 @@ import {
   uploadLibraryLogoAction,
 } from "@/app/admin/actions";
 import { FormFieldShell } from "@/components/admin/form-field-shell";
+import { LogoField } from "@/components/admin/logo-field";
 import { TagInput } from "@/components/admin/tag-input";
 import { Button } from "@/components/ui/button";
 import {
@@ -116,10 +117,15 @@ export function LibraryForm({
     handleSubmit,
     register,
     setError,
+    setValue,
   } = useForm<LibraryFormInput, unknown, LibraryFormValues>({
     defaultValues,
     resolver: zodResolver(libraryFormSchema),
   });
+  const watchedGithub = useWatch({ control, name: "github" }) ?? "";
+  const watchedLogo = useWatch({ control, name: "logo" }) ?? "";
+  const watchedName = useWatch({ control, name: "name" }) ?? "";
+  const watchedWebsite = useWatch({ control, name: "website" }) ?? "";
 
   async function onSubmit(values: LibraryFormValues) {
     if (logoFile) {
@@ -232,27 +238,23 @@ export function LibraryForm({
                 />
               </FormFieldShell>
               <FormFieldShell
+                className="md:col-span-2"
                 error={errors.logo?.message}
                 htmlFor="library-logo"
-                label="Logo 对象 key（可选）"
+                label="Logo（可选）"
               >
-                <Input
+                <LogoField
+                  file={logoFile}
+                  github={watchedGithub}
                   id="library-logo"
-                  placeholder="awesome-shadcn-ui/icons/example.svg"
-                  {...register("logo")}
-                />
-              </FormFieldShell>
-              <FormFieldShell
-                htmlFor="library-logo-file"
-                label="上传 Logo 文件（可选，覆盖 key）"
-              >
-                <Input
-                  accept=".svg,.png,.ico,.webp"
-                  id="library-logo-file"
-                  onChange={(event) => {
-                    setLogoFile(event.target.files?.[0] ?? null);
+                  logoKey={watchedLogo}
+                  name={watchedName}
+                  onFileChange={setLogoFile}
+                  onRemove={() => {
+                    setLogoFile(null);
+                    setValue("logo", "", { shouldDirty: true });
                   }}
-                  type="file"
+                  website={watchedWebsite}
                 />
               </FormFieldShell>
               <FormFieldShell
