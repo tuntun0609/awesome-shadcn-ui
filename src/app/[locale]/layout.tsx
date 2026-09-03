@@ -3,6 +3,7 @@ import { Geist, Inter, Noto_Sans_SC } from "next/font/google";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations } from "next-intl/server";
+import { ThemeProvider } from "@/components/theme-provider";
 import { routing } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
 import "../globals.css";
@@ -82,7 +83,9 @@ export default async function RootLayout({
     >
       <body className="min-h-full" suppressHydrationWarning>
         <NextIntlClientProvider messages={messages}>
-          {children}
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            {children}
+          </ThemeProvider>
         </NextIntlClientProvider>
       </body>
     </html>

@@ -2,32 +2,23 @@
 
 import { Moon, Sun } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
+import { useTheme } from "next-themes";
+import { useCallback } from "react";
 
 export function ThemeToggle() {
   const t = useTranslations("theme");
-  const [dark, setDark] = useState(false);
+  const { resolvedTheme, setTheme } = useTheme();
 
-  useEffect(() => {
-    const stored = window.localStorage.getItem("theme");
-    const prefersDark = window.matchMedia(
-      "(prefers-color-scheme: dark)"
-    ).matches;
-    const nextDark = stored ? stored === "dark" : prefersDark;
-    document.documentElement.classList.toggle("dark", nextDark);
-    setDark(nextDark);
-  }, []);
+  const dark = resolvedTheme === "dark";
+  const label = dark ? t("toLight") : t("toDark");
 
   const toggle = useCallback(() => {
-    const nextDark = !dark;
-    document.documentElement.classList.toggle("dark", nextDark);
-    window.localStorage.setItem("theme", nextDark ? "dark" : "light");
-    setDark(nextDark);
-  }, [dark]);
+    setTheme(resolvedTheme === "dark" ? "light" : "dark");
+  }, [resolvedTheme, setTheme]);
 
   return (
     <button
-      aria-label={dark ? t("toLight") : t("toDark")}
+      aria-label={label}
       className="nav-link px-2"
       onClick={toggle}
       type="button"
