@@ -1,85 +1,28 @@
 # Awesome shadcn/ui
 
-A minimal, filterable directory of UI libraries that publicly support the
-shadcn CLI or a compatible registry.
+[![Netlify Status](https://api.netlify.com/api/v1/badges/9ff7ba09-d830-4891-8344-b65fe0ab87e0/deploy-status)](https://app.netlify.com/projects/awesome-shadcn-ui/deploys)
 
-## Local development
+[English](./README.en.md) | 中文
 
-```bash
-bun install
-bun run db:migrate
-bun run db:seed
-bun run dev
-```
+一个可筛选、可搜索的 shadcn/ui 生态组件库目录，收录公开声明支持 shadcn CLI 或兼容 registry 的 UI 库。
 
-The default database is `file:local.db`, which is ignored by Git. Copy
-`.env.example` to `.env.local` to use another local file or a remote Turso
-database. Runtime database access uses `TURSO_DATABASE_URL` and, for remote
-`libsql://` URLs, `TURSO_AUTH_TOKEN`.
+**[在线浏览 →](https://awesome-shadcn-ui.tuntun.site/)**
 
-Useful checks:
+## 功能特性
 
-```bash
-bun run check
-bun test
-bun run db:check
-bun run build
-```
+- **多维度筛选**：按交付类型（组件 / 区块 / 模板）、使用场景（营销、仪表盘、电商、内容、数据展示、AI）、定价、源码模式与访问方式组合过滤
+- **搜索**：按名称、描述与标签快速检索
+- **GitHub 指标**：展示各库的 Star 数与最近提交快照
+- **详情页**：每个库都有独立的介绍页，包含官网、文档与安装指引的入口
+- **双语界面**：中英文随时切换，支持明暗主题
 
-## Maintaining the catalog
+## 收录政策
 
-Turso/libSQL is the runtime source of truth. Drizzle schema and migrations live
-in `src/db/schema.ts` and `drizzle/`. The bootstrap fixture in
-`scripts/fixtures/catalog.ts` initializes an empty database but is never read by
-the application. This phase intentionally provides no catalog editing UI or
-routine mutation CLI. `bun run db:studio` is available for local inspection.
+收录基于各项目自身的公开声明：声明支持 shadcn CLI 或提供兼容 registry。本项目不验证其安装命令与 registry 的可用性。定价、源码开放情况与访问要求可能变化，请以各官方站点为准。
 
-Create and apply reviewed migrations with:
+目前不接受新库收录申请，GitHub Issues 仅用于对现有条目的纠错。
 
-```bash
-bun run db:generate
-bun run db:check
-bun run db:migrate
-```
+## 许可
 
-Set Turso credentials and use `bun run db:migrate:turso` to migrate a remote
-database. Apply production migrations once in a serialized deployment step;
-do not run migrations from every application instance.
-
-Refresh GitHub snapshots manually when needed:
-
-```bash
-bun run sync:github
-```
-
-The script reads repository URLs from the database and updates the current
-metric rows in place. Set `GITHUB_TOKEN` to reduce the chance of API rate
-limiting. Failed requests retain the previous database value when one exists.
-There is no scheduled job or metric history.
-
-## Inclusion policy
-
-Inclusion is based on each project’s own public claim that it supports the
-shadcn CLI or a compatible registry. The commands and registries are not
-verified by this project. Pricing, source availability, and access requirements
-can change, so the official product site remains the source of truth.
-
-The catalog does not accept submissions for new libraries at this time. GitHub
-Issues are available only for corrections to existing entries.
-
-## Deployment
-
-The site is a standard Node.js Next.js application and is not tied to a hosting
-provider. Set `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, and
-`NEXT_PUBLIC_SITE_URL` in the runtime environment. Public routes query the
-database at request time through a five-minute server cache, so `next build`
-does not require database credentials. Database failures are surfaced rather
-than hidden behind a static fallback.
-
-Library logos are stored in Cloudflare R2 (object keys such as
-`awesome-shadcn-ui/icons/<slug>.svg`) and served from a public custom domain. Configure
-`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, and
-`NEXT_PUBLIC_R2_PUBLIC_DOMAIN` to enable logo uploads from the admin form and
-`bun run sync:icons`. `bun run migrate:logos` moves legacy `public/logos`
-files into R2 and rewrites the stored paths; append `--cleanup` to remove the
-local files afterwards.
+- **源代码**：以 [MIT License](./LICENSE) 开源。
+- **目录数据**（库的收录信息、描述、分类等）：使用需获得授权，请联系 [tun.nozomi@gmail.com](mailto:tun.nozomi@gmail.com)。
