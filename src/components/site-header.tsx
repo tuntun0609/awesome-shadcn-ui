@@ -11,8 +11,8 @@ export function SiteHeader() {
   const t = useTranslations("header");
 
   return (
-    <header className="flex h-16 items-center justify-between border-border border-b">
-      <Link className="inline-flex items-center gap-2.5" href="/">
+    <header className="flex h-16 items-center justify-between gap-3 border-border border-b">
+      <Link className="inline-flex min-w-0 items-center gap-2.5" href="/">
         <Image
           alt=""
           aria-hidden="true"
@@ -26,14 +26,14 @@ export function SiteHeader() {
           <span className="font-heading font-semibold text-base leading-none">
             Awesome
           </span>
-          <span className="font-medium font-mono text-[11px] text-muted-foreground tracking-tight">
+          <span className="hidden font-medium font-mono text-[11px] text-muted-foreground tracking-tight sm:inline">
             shadcn/ui
           </span>
         </span>
       </Link>
       <nav aria-label={t("navLabel")} className="flex items-center gap-1">
         <a
-          className="nav-link px-2"
+          className="nav-link hidden px-2 sm:inline-flex"
           href={repositoryUrl}
           rel="noreferrer"
           target="_blank"
