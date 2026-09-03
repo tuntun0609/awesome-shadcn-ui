@@ -1,3 +1,4 @@
+import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { LocaleToggle } from "@/components/locale-toggle";
@@ -49,6 +50,24 @@ export function SiteHeader() {
         </a>
         <LocaleToggle />
         <ThemeToggle />
+        <Show when="signed-out">
+          <SignInButton>
+            <button className="nav-link px-2 text-sm" type="button">
+              {t("signIn")}
+            </button>
+          </SignInButton>
+          <SignUpButton>
+            <button
+              className="inline-flex h-8 items-center rounded-md bg-primary px-3 font-medium text-primary-foreground text-sm transition-colors hover:bg-primary/90"
+              type="button"
+            >
+              {t("signUp")}
+            </button>
+          </SignUpButton>
+        </Show>
+        <Show when="signed-in">
+          <UserButton />
+        </Show>
       </nav>
     </header>
   );

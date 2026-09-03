@@ -7,7 +7,9 @@
   "header": {
     "about": "About",
     "github": "View the project on GitHub",
-    "navLabel": "Primary navigation"
+    "navLabel": "Primary navigation",
+    "signIn": "Sign in",
+    "signUp": "Sign up"
   },
   "localeSwitcher": {
     "label": "Change language"

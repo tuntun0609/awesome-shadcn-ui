@@ -7,7 +7,9 @@
   "header": {
     "about": "关于",
     "github": "在 GitHub 上查看该项目",
-    "navLabel": "主导航"
+    "navLabel": "主导航",
+    "signIn": "登录",
+    "signUp": "注册"
   },
   "localeSwitcher": {
     "label": "切换语言"
