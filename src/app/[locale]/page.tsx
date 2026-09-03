@@ -28,7 +28,7 @@ export default async function Home() {
         <SiteHeader />
         <section className="grid gap-10 py-20 sm:py-28 md:grid-cols-[minmax(0,1fr)_260px] md:items-end">
           <div>
-            <p className="font-mono text-[11px] text-blue-600 uppercase tracking-[0.2em] dark:text-blue-400">
+            <p className="font-mono text-[11px] text-primary uppercase tracking-[0.2em]">
               {t("eyebrow")}
             </p>
             <h1 className="mt-5 max-w-3xl font-heading text-5xl leading-[0.98] tracking-[-0.04em] sm:text-6xl md:text-7xl">

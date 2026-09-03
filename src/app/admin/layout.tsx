@@ -24,7 +24,10 @@ export default async function AdminLayout({
 
   return (
     <html lang="zh-CN" suppressHydrationWarning>
-      <body className="min-h-screen bg-background" suppressHydrationWarning>
+      <body
+        className="admin min-h-screen bg-background"
+        suppressHydrationWarning
+      >
         <SidebarProvider defaultOpen={sidebarState}>
           <AppSidebar />
           <SidebarInset>

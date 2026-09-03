@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function NewLibraryPage() {
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <div className="flex items-center gap-3">
         <Button
           aria-label="返回列表"

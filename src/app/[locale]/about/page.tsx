@@ -38,7 +38,7 @@ export default async function AboutPage() {
       <div className="mx-auto w-full max-w-[1080px] px-5 sm:px-8">
         <SiteHeader />
         <article className="mx-auto max-w-2xl py-20 sm:py-28">
-          <p className="font-mono text-[11px] text-blue-600 uppercase tracking-[0.2em] dark:text-blue-400">
+          <p className="font-mono text-[11px] text-primary uppercase tracking-[0.2em]">
             {t("eyebrow")}
           </p>
           <h1 className="mt-5 font-heading text-5xl tracking-[-0.035em] sm:text-6xl">
@@ -53,7 +53,7 @@ export default async function AboutPage() {
             ))}
             <section>
               <a
-                className="mt-4 inline-flex items-center gap-2 text-blue-600 text-sm underline underline-offset-4 dark:text-blue-400"
+                className="mt-4 inline-flex items-center gap-2 text-primary text-sm underline underline-offset-4"
                 href={`${repositoryUrl}/issues/new?template=correction.yml`}
                 rel="noreferrer"
                 target="_blank"

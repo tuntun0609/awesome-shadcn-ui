@@ -93,7 +93,7 @@ function FilterGroup({
             className={cn(
               "rounded-md border px-2.5 py-1.5 font-medium text-xs transition-colors",
               active.includes(option)
-                ? "border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-300"
+                ? "border-primary/40 bg-primary/10 text-primary"
                 : "bg-background text-muted-foreground hover:text-foreground"
             )}
             key={option}
@@ -261,10 +261,10 @@ export function LibraryDirectory({
             <span className="sr-only">{t("searchLabel")}</span>
             <Search
               aria-hidden="true"
-              className="absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-blue-600 dark:group-focus-within:text-blue-400"
+              className="absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary"
             />
             <input
-              className="h-11 w-full rounded-lg border bg-background pr-4 pl-11 text-sm outline-none transition-[border-color,box-shadow] placeholder:text-muted-foreground/70 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+              className="h-11 w-full rounded-lg border bg-background pr-4 pl-11 text-sm outline-none transition-[border-color,box-shadow] placeholder:text-muted-foreground/70 focus:border-primary focus:ring-4 focus:ring-primary/10"
               onChange={(event) => setParam("q", event.target.value)}
               placeholder={t("searchPlaceholder")}
               type="search"
@@ -307,7 +307,7 @@ export function LibraryDirectory({
           <FilterGroups filters={filters} onToggle={toggleParam} />
           {selectedCount ? (
             <button
-              className="mt-5 text-blue-600 text-xs underline underline-offset-4 dark:text-blue-400"
+              className="mt-5 text-primary text-xs underline underline-offset-4"
               onClick={clearFilters}
               type="button"
             >
@@ -349,7 +349,7 @@ export function LibraryDirectory({
                     {library.name}
                   </Link>
                   {library.featuredRank ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2 py-0.5 font-medium text-[10px] text-blue-700 uppercase tracking-wide dark:text-blue-300">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 font-medium text-[10px] text-primary uppercase tracking-wide">
                       <Sparkles aria-hidden="true" className="size-2.5" />
                       {t("featured")}
                     </span>
@@ -392,7 +392,7 @@ export function LibraryDirectory({
 
               <a
                 aria-label={t("visit", { name: library.name })}
-                className="inline-flex size-9 items-center justify-center rounded-lg border text-muted-foreground transition-[color,border-color] hover:border-blue-500/50 hover:text-blue-600 sm:justify-self-end dark:hover:text-blue-400"
+                className="inline-flex size-9 items-center justify-center rounded-lg border text-muted-foreground transition-[color,border-color] hover:border-primary/50 hover:text-primary sm:justify-self-end"
                 href={withRefParam(library.website, host)}
                 rel="noreferrer"
                 target="_blank"
@@ -408,7 +408,7 @@ export function LibraryDirectory({
         <div className="border-border border-b py-20 text-center">
           <p className="font-medium">{t("noMatch")}</p>
           <button
-            className="mt-3 text-blue-600 text-sm underline underline-offset-4 dark:text-blue-400"
+            className="mt-3 text-primary text-sm underline underline-offset-4"
             onClick={clearFilters}
             type="button"
           >

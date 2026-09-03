@@ -6,13 +6,7 @@ import { notFound } from "next/navigation";
 import { DeleteLibraryButton } from "@/components/admin/delete-library-button";
 import { LibraryForm } from "@/components/admin/library-form";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { getDatabase } from "@/db/client";
 import {
   githubMetrics,
@@ -98,7 +92,7 @@ export default async function EditLibraryPage({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <div className="flex items-center gap-3">
         <Button
           aria-label="返回列表"
@@ -138,17 +132,14 @@ export default async function EditLibraryPage({
 
       {metrics ? (
         <Card>
-          <CardHeader>
-            <CardTitle>GitHub 指标（只读）</CardTitle>
-            <CardDescription>
-              由 <code>sync:github</code> 脚本自动同步，此处仅作展示。
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-x-10 gap-y-2 text-sm">
-            <span className="flex items-center gap-1.5">
+          <CardContent className="flex flex-col gap-x-8 gap-y-1.5 py-4 text-sm sm:flex-row sm:flex-wrap sm:items-center">
+            <span className="flex items-center gap-1.5 font-medium">
               <StarIcon className="size-4 text-amber-500" />
+              GitHub 指标
+            </span>
+            <span className="flex items-center gap-1.5 tabular-nums">
               Stars：
-              <span className="font-medium tabular-nums">{metrics.stars}</span>
+              <span className="font-medium">{metrics.stars}</span>
             </span>
             <span className="text-muted-foreground">
               最近提交：
@@ -163,6 +154,9 @@ export default async function EditLibraryPage({
               <span className="font-medium text-foreground tabular-nums">
                 {formatAdminDate(metrics.syncedAt)}
               </span>
+            </span>
+            <span className="text-muted-foreground sm:ml-auto">
+              由 <code>sync:github</code> 自动同步，只读
             </span>
           </CardContent>
         </Card>
