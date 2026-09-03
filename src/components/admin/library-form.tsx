@@ -5,12 +5,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { SaveIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import {
   createLibraryAction,
   type LibraryActionState,
   updateLibraryAction,
+  uploadLibraryLogoAction,
 } from "@/app/admin/actions";
 import { FormFieldShell } from "@/components/admin/form-field-shell";
 import { TagInput } from "@/components/admin/tag-input";
@@ -107,6 +109,7 @@ export function LibraryForm({
   mode,
 }: LibraryFormProps) {
   const router = useRouter();
+  const [logoFile, setLogoFile] = useState<File | null>(null);
   const {
     control,
     formState: { errors, isDirty, isSubmitting },
@@ -119,6 +122,15 @@ export function LibraryForm({
   });
 
   async function onSubmit(values: LibraryFormValues) {
+    if (logoFile) {
+      const upload = await uploadLibraryLogoAction(values.slug, logoFile);
+      if (upload.key === undefined) {
+        applyActionFailure(upload);
+        return;
+      }
+      values.logo = upload.key;
+    }
+
     if (mode === "create") {
       const result = await createLibraryAction(values);
       if (result.id) {
@@ -222,12 +234,25 @@ export function LibraryForm({
               <FormFieldShell
                 error={errors.logo?.message}
                 htmlFor="library-logo"
-                label="Logo 路径（可选）"
+                label="Logo 对象 key（可选）"
               >
                 <Input
                   id="library-logo"
-                  placeholder="/icons/example.svg"
+                  placeholder="awesome-shadcn-ui/icons/example.svg"
                   {...register("logo")}
+                />
+              </FormFieldShell>
+              <FormFieldShell
+                htmlFor="library-logo-file"
+                label="上传 Logo 文件（可选，覆盖 key）"
+              >
+                <Input
+                  accept=".svg,.png,.ico,.webp"
+                  id="library-logo-file"
+                  onChange={(event) => {
+                    setLogoFile(event.target.files?.[0] ?? null);
+                  }}
+                  type="file"
                 />
               </FormFieldShell>
               <FormFieldShell

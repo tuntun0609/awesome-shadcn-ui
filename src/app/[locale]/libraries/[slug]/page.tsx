@@ -15,6 +15,7 @@ import { SiteHeader } from "@/components/site-header";
 import { getCatalogEntry } from "@/db/catalog-data";
 import { Link } from "@/i18n/navigation";
 import { formatCommitDate, formatCompactNumber } from "@/lib/catalog";
+import { logoPublicUrl } from "@/lib/logo-url";
 import { withRefParam } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -52,6 +53,7 @@ export default async function LibraryPage({
   }
   const { library, metric } = entry;
   const host = (await headers()).get("host") ?? "";
+  const logoSrc = library.logo ? logoPublicUrl(library.logo) : undefined;
 
   const [t, tagsT, metricsT, locale] = await Promise.all([
     getTranslations("libraryDetail"),
@@ -81,12 +83,12 @@ export default async function LibraryPage({
           </Link>
           <div className="mt-12 flex items-start gap-5">
             <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border bg-card font-semibold shadow-sm">
-              {library.logo ? (
+              {logoSrc ? (
                 <Image
                   alt=""
                   className="size-9 object-contain"
                   height={36}
-                  src={library.logo}
+                  src={logoSrc}
                   unoptimized
                   width={36}
                 />

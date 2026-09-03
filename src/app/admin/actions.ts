@@ -14,7 +14,9 @@ import {
 import {
   type LibraryFormValues,
   libraryFormSchema,
+  slugSchema,
 } from "@/lib/library-form-schema";
+import { uploadLibraryLogo } from "@/lib/r2";
 
 export interface LibraryActionState {
   fieldErrors?: Partial<Record<string, string>>;
@@ -196,6 +198,33 @@ export async function updateLibraryAction(
 }
 
 const deleteInputSchema = z.coerce.number().int().positive();
+
+const logoUploadInputSchema = z.object({
+  file: z.instanceof(File),
+  slug: slugSchema,
+});
+
+export async function uploadLibraryLogoAction(
+  slug: string,
+  file: File
+): Promise<LibraryActionState & { key?: string }> {
+  const parsed = logoUploadInputSchema.safeParse({ file, slug });
+  if (!parsed.success) {
+    return { fieldErrors: { logo: "无效的 Logo 上传请求" } };
+  }
+
+  try {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const key = await uploadLibraryLogo(parsed.data.slug, bytes);
+    return { key };
+  } catch (error) {
+    return {
+      fieldErrors: {
+        logo: error instanceof Error ? error.message : "Logo 上传失败",
+      },
+    };
+  }
+}
 
 export async function deleteLibraryAction(
   id: number

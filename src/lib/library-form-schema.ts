@@ -45,6 +45,8 @@ const slugSchema = z
     "slug 只能包含小写字母、数字和中划线，且不能以中划线开头或结尾"
   );
 
+export { slugSchema };
+
 const urlSchema = z
   .string()
   .trim()
@@ -57,9 +59,9 @@ const urlSchema = z
   );
 
 const optionalUrlSchema = z.union([urlSchema, z.literal("")]);
-
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const LOGO_PATH_PATTERN = /^\/[\w\-./]+$/;
+const LOGO_KEY_PATTERN =
+  /^awesome-shadcn-ui\/icons\/[a-z0-9]+(-[a-z0-9]+)*\.(ico|png|svg|webp)$/;
 const FEATURED_RANK_PATTERN = /^\d+$/;
 
 export const libraryFormSchema = z.object({
@@ -103,8 +105,9 @@ export const libraryFormSchema = z.object({
   logo: z
     .string()
     .trim()
-    .refine((value) => value === "" || LOGO_PATH_PATTERN.test(value), {
-      message: "Logo 路径需以 / 开头，如 /icons/xxx.svg",
+    .refine((value) => value === "" || LOGO_KEY_PATTERN.test(value), {
+      message:
+        "Logo 需为 awesome-shadcn-ui/icons/<slug>.<ext> 形式的 R2 对象 key",
     }),
   name: z.string().trim().min(1, "请填写名称"),
   pricing: z.enum(["free", "freemium", "paid", "undisclosed"]),

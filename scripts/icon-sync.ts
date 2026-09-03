@@ -1,7 +1,13 @@
-import { mkdir, rename, unlink, writeFile } from "node:fs/promises";
-import { dirname, extname, resolve, sep } from "node:path";
+import { extname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readCatalog } from "../src/db/catalog-repository";
+import {
+  detectIconFormat,
+  type IconFormat,
+  iconContentType,
+  isSafeSvgText,
+} from "../src/lib/icon-validation";
+import { uploadR2Object } from "../src/lib/r2";
 
 export interface IconSyncTarget {
   github?: string;
@@ -11,7 +17,7 @@ export interface IconSyncTarget {
 }
 
 export interface IconAsset {
-  bytes: Uint8Array;
+  bytes: Uint8Array<ArrayBuffer>;
   sourceUrl: string;
 }
 
@@ -31,7 +37,10 @@ interface PageIconLinks {
 }
 
 type Fetcher = typeof fetch;
-type IconWriter = (target: IconSyncTarget, bytes: Uint8Array) => Promise<void>;
+type IconWriter = (
+  target: IconSyncTarget,
+  bytes: Uint8Array<ArrayBuffer>
+) => Promise<void>;
 
 const ATTRIBUTE_PATTERN =
   /([^\s=/>]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
@@ -55,15 +64,7 @@ const MAX_PAGE_BYTES = 5 * 1024 * 1024;
 const REQUEST_TIMEOUT_MS = 10_000;
 const SIZE_PATTERN = /^(\d+)x(\d+)$/i;
 const SUPPORTED_EXTENSION = /\.(?:ico|jpe?g|png|svg|webp)$/i;
-const SVG_BOM_PATTERN = /^\uFEFF/;
-const SVG_HREF_PATTERN =
-  /(?:href|xlink:href)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi;
-const SVG_ROOT_PATTERN = /^(?:<\?xml[^>]*>\s*)?<svg\b/i;
-const UNSAFE_SVG_PATTERN = /<script\b|<foreignObject\b|\bon\w+\s*=/i;
 const WHITESPACE_PATTERN = /\s+/;
-const PUBLIC_ROOT = resolve(
-  fileURLToPath(new URL("../public/", import.meta.url))
-);
 
 function decodeHtmlAttribute(value: string) {
   return value
@@ -235,38 +236,18 @@ async function readTextResponse(response: Response) {
   return text;
 }
 
-function hasBytes(bytes: Uint8Array, expected: number[], offset = 0) {
-  return expected.every((value, index) => bytes[offset + index] === value);
-}
-
 export function isSupportedIcon(bytes: Uint8Array) {
   if (bytes.byteLength < 8 || bytes.byteLength > MAX_ICON_BYTES) {
     return false;
   }
 
-  const isPng = hasBytes(
-    bytes,
-    [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
-  );
-  const isIco = hasBytes(bytes, [0x00, 0x00, 0x01, 0x00]);
-  const isWebp =
-    hasBytes(bytes, [0x52, 0x49, 0x46, 0x46]) &&
-    hasBytes(bytes, [0x57, 0x45, 0x42, 0x50], 8);
-  const isJpeg = hasBytes(bytes, [0xff, 0xd8, 0xff]);
-  if (isPng || isIco || isWebp || isJpeg) {
-    return true;
-  }
-
-  const svg = new TextDecoder()
-    .decode(bytes)
-    .replace(SVG_BOM_PATTERN, "")
-    .trimStart();
-  if (!SVG_ROOT_PATTERN.test(svg) || UNSAFE_SVG_PATTERN.test(svg)) {
+  const format = detectIconFormat(bytes);
+  if (!format) {
     return false;
   }
-  return [...svg.matchAll(SVG_HREF_PATTERN)].every((match) =>
-    (match[1] ?? match[2] ?? match[3] ?? "").startsWith("#")
-  );
+  return format === "svg"
+    ? isSafeSvgText(new TextDecoder().decode(bytes))
+    : true;
 }
 
 async function downloadFirstIcon(
@@ -529,22 +510,21 @@ export async function resolveIcon(
     : null;
 }
 
-async function writeIcon(target: IconSyncTarget, bytes: Uint8Array) {
-  const relativePath = target.logo.replace(LEADING_SLASHES, "");
-  const outputPath = resolve(PUBLIC_ROOT, relativePath);
-  if (!outputPath.startsWith(`${PUBLIC_ROOT}${sep}`)) {
-    throw new Error(`logo path escapes public: ${target.logo}`);
+function iconFormatForUpload(bytes: Uint8Array<ArrayBuffer>): IconFormat {
+  const format = detectIconFormat(bytes);
+  if (!format) {
+    throw new Error("icon bytes are not a supported format");
   }
+  return format;
+}
 
-  await mkdir(dirname(outputPath), { recursive: true });
-  const temporaryPath = `${outputPath}.${process.pid}.tmp`;
-  try {
-    await writeFile(temporaryPath, bytes);
-    await rename(temporaryPath, outputPath);
-  } catch (error) {
-    await unlink(temporaryPath).catch(() => undefined);
-    throw error;
-  }
+async function writeIcon(
+  target: IconSyncTarget,
+  bytes: Uint8Array<ArrayBuffer>
+) {
+  const format = iconFormatForUpload(bytes);
+  const key = target.logo.replace(LEADING_SLASHES, "");
+  await uploadR2Object(key, bytes, iconContentType(format));
 }
 
 export async function syncIcons(

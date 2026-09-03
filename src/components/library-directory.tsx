@@ -39,6 +39,7 @@ import {
   sourceModels,
   useCases,
 } from "@/lib/catalog-model";
+import { logoPublicUrl } from "@/lib/logo-url";
 import { cn, withRefParam } from "@/lib/utils";
 
 interface LibraryDirectoryProps {
@@ -320,18 +321,21 @@ export function LibraryDirectory({
       <div>
         {visibleLibraries.map((library) => {
           const metric = metrics.repositories[library.slug];
+          const logoSrc = library.logo
+            ? logoPublicUrl(library.logo)
+            : undefined;
           return (
             <article
               className="group relative -mx-4 grid gap-4 rounded-xl px-4 py-6 transition-colors after:absolute after:right-4 after:bottom-0 after:left-4 after:h-px after:bg-border/40 after:content-[''] last:after:hidden hover:bg-muted/35 sm:grid-cols-[44px_minmax(0,1fr)_auto] sm:items-center sm:gap-5 sm:after:left-20"
               key={library.slug}
             >
               <div className="relative flex size-11 items-center justify-center overflow-hidden rounded-xl border bg-card font-semibold text-sm shadow-sm">
-                {library.logo ? (
+                {logoSrc ? (
                   <Image
                     alt=""
                     className="size-7 object-contain"
                     height={28}
-                    src={library.logo}
+                    src={logoSrc}
                     unoptimized
                     width={28}
                   />

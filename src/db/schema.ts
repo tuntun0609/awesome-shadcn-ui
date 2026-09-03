@@ -26,7 +26,7 @@ export const libraries = sqliteTable(
     github: text("github"),
     /** 仅供数据库内部关联使用的自增主键。 */
     id: integer("id").primaryKey({ autoIncrement: true }),
-    /** 站点 public 目录下的 Logo 路径；为空表示没有本地图标。 */
+    /** R2 中 Logo 对象的 key（如 icons/foo.svg）；为空表示没有图标。 */
     logo: text("logo"),
     /** 组件库的展示名称。 */
     name: text("name").notNull(),

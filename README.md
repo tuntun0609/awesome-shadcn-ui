@@ -75,3 +75,11 @@ provider. Set `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, and
 database at request time through a five-minute server cache, so `next build`
 does not require database credentials. Database failures are surfaced rather
 than hidden behind a static fallback.
+
+Library logos are stored in Cloudflare R2 (object keys such as
+`awesome-shadcn-ui/icons/<slug>.svg`) and served from a public custom domain. Configure
+`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, and
+`NEXT_PUBLIC_R2_PUBLIC_DOMAIN` to enable logo uploads from the admin form and
+`bun run sync:icons`. `bun run migrate:logos` moves legacy `public/logos`
+files into R2 and rewrites the stored paths; append `--cleanup` to remove the
+local files afterwards.
