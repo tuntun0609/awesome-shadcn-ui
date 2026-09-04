@@ -11,6 +11,7 @@ import {
   libraryTags,
   libraryUseCases,
 } from "@/db/schema";
+import { requireAdmin } from "@/lib/admin-auth";
 import { fetchGithubMetrics } from "@/lib/github-metrics-fetcher";
 import {
   type IconSourceTarget,
@@ -146,6 +147,7 @@ function refreshAdminData() {
 export async function createLibraryAction(
   raw: unknown
 ): Promise<LibraryActionState & { id?: number }> {
+  await requireAdmin();
   const parsed = parseFormValues(raw);
   if (!parsed.ok) {
     return parsed.state;
@@ -174,6 +176,7 @@ export async function updateLibraryAction(
   id: number,
   raw: unknown
 ): Promise<LibraryActionState> {
+  await requireAdmin();
   const parsed = parseFormValues(raw);
   if (!parsed.ok) {
     return parsed.state;
@@ -216,6 +219,7 @@ export async function uploadLibraryLogoAction(
   slug: string,
   file: File
 ): Promise<LibraryActionState & { key?: string }> {
+  await requireAdmin();
   const parsed = logoUploadInputSchema.safeParse({ file, slug });
   if (!parsed.success) {
     return { fieldErrors: { logo: "无效的 Logo 上传请求" } };
@@ -252,6 +256,7 @@ export async function fetchLibraryLogoAction(
   website: string,
   github: string
 ): Promise<LogoFetchState> {
+  await requireAdmin();
   const parsed = logoFetchInputSchema.safeParse({ github, website });
   if (!parsed.success) {
     return { message: parsed.error.issues[0]?.message ?? "官网地址无效" };
@@ -302,6 +307,7 @@ const githubMetricsFetchInputSchema = z.object({
 export async function fetchGithubMetricsAction(
   github: string
 ): Promise<GithubMetricsFetchState> {
+  await requireAdmin();
   const parsed = githubMetricsFetchInputSchema.safeParse({ github });
   if (!parsed.success) {
     return { message: parsed.error.issues[0]?.message ?? "GitHub 地址无效" };
@@ -328,6 +334,7 @@ export async function saveGithubMetricsAction(
   libraryId: number,
   metric: { latestCommitAt: string | null; stars: number; syncedAt: string }
 ): Promise<LibraryActionState> {
+  await requireAdmin();
   const parsed = githubMetricsSaveInputSchema.safeParse({
     ...metric,
     libraryId,
@@ -360,6 +367,7 @@ export async function saveGithubMetricsAction(
 export async function deleteLibraryAction(
   id: number
 ): Promise<LibraryActionState> {
+  await requireAdmin();
   const parsedId = deleteInputSchema.safeParse(id);
   if (!parsedId.success) {
     return { message: "无效的记录 ID" };

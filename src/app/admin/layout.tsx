@@ -1,3 +1,5 @@
+import { ClerkProvider } from "@clerk/nextjs";
+import { shadcn } from "@clerk/ui/themes";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { AppSidebar } from "@/components/admin/app-sidebar";
@@ -8,6 +10,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/sonner";
+import { requireAdmin } from "@/lib/admin-auth";
 import "../globals.css";
 
 export const metadata: Metadata = {
@@ -23,27 +26,31 @@ export default async function AdminLayout({
   const cookieStore = await cookies();
   const sidebarState = cookieStore.get("sidebar_state")?.value !== "false";
 
+  await requireAdmin();
+
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <body
         className="admin min-h-screen bg-background"
         suppressHydrationWarning
       >
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <SidebarProvider defaultOpen={sidebarState}>
-            <AppSidebar />
-            <SidebarInset>
-              <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
-                <SidebarTrigger className="-ml-1" />
-                <span className="text-muted-foreground text-sm">
-                  Awesome shadcn/ui 目录管理
-                </span>
-              </header>
-              <main className="flex-1 p-4 md:p-6">{children}</main>
-            </SidebarInset>
-          </SidebarProvider>
-          <Toaster />
-        </ThemeProvider>
+        <ClerkProvider appearance={{ theme: shadcn }}>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <SidebarProvider defaultOpen={sidebarState}>
+              <AppSidebar />
+              <SidebarInset>
+                <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+                  <SidebarTrigger className="-ml-1" />
+                  <span className="text-muted-foreground text-sm">
+                    Awesome shadcn/ui 目录管理
+                  </span>
+                </header>
+                <main className="flex-1 p-4 md:p-6">{children}</main>
+              </SidebarInset>
+            </SidebarProvider>
+            <Toaster />
+          </ThemeProvider>
+        </ClerkProvider>
       </body>
     </html>
   );

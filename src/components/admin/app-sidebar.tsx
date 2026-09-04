@@ -1,5 +1,6 @@
 "use client";
 
+import { UserButton } from "@clerk/nextjs";
 import { ExternalLinkIcon, LayoutListIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -69,6 +70,9 @@ export function AppSidebar() {
               <ExternalLinkIcon />
               <span>前往前台</span>
             </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <UserButton showName />
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
