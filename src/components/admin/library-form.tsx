@@ -14,6 +14,7 @@ import {
   updateLibraryAction,
   uploadLibraryLogoAction,
 } from "@/app/admin/actions";
+import { AiAutofillBar } from "@/components/admin/ai-autofill-bar";
 import { FormFieldShell } from "@/components/admin/form-field-shell";
 import { LogoField } from "@/components/admin/logo-field";
 import { TagInput } from "@/components/admin/tag-input";
@@ -36,6 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import type { AutofillFieldMeta } from "@/lib/ai/autofill-events";
 import {
   LIBRARY_ACCESS_OPTIONS,
   LIBRARY_DELIVERY_OPTIONS,
@@ -46,6 +48,23 @@ import {
   type LibraryFormValues,
   libraryFormSchema,
 } from "@/lib/library-form-schema";
+
+/** AI 填充可写入的表单字段（addedAt / logo / featuredRank 不属于 AI 职责）。 */
+const AUTOFILLABLE_FIELDS = new Set([
+  "access",
+  "deliveries",
+  "description",
+  "github",
+  "name",
+  "pricing",
+  "slug",
+  "source",
+  "tags",
+  "useCases",
+  "website",
+]);
+
+type FieldMetaMap = Partial<Record<keyof LibraryFormInput, AutofillFieldMeta>>;
 
 interface LibraryFormProps {
   defaultValues: LibraryFormInput;
@@ -111,6 +130,8 @@ export function LibraryForm({
 }: LibraryFormProps) {
   const router = useRouter();
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [fieldMeta, setFieldMeta] = useState<FieldMetaMap>({});
+  const [logoCollectSignal, setLogoCollectSignal] = useState(0);
   const {
     control,
     formState: { errors, isDirty, isSubmitting },
@@ -126,6 +147,33 @@ export function LibraryForm({
   const watchedLogo = useWatch({ control, name: "logo" }) ?? "";
   const watchedName = useWatch({ control, name: "name" }) ?? "";
   const watchedWebsite = useWatch({ control, name: "website" }) ?? "";
+
+  /** AI 填充字段事件：流式写入表单并记录 provenance 角标。 */
+  function handleAutofillField(
+    field: string,
+    value: unknown,
+    meta: AutofillFieldMeta
+  ) {
+    if (!AUTOFILLABLE_FIELDS.has(field)) {
+      return;
+    }
+    if (value !== undefined) {
+      setValue(field as keyof LibraryFormInput, value as never, {
+        shouldDirty: true,
+      });
+    }
+    setFieldMeta((prev) => ({
+      ...prev,
+      [field]: { confidence: meta.confidence, source: meta.source },
+    }));
+  }
+
+  /** AI 填充结束：自动触发 Logo 采集（ADR 0003 决策 #13）。 */
+  function handleAutofillFinish() {
+    if (watchedWebsite !== "") {
+      setLogoCollectSignal((signal) => signal + 1);
+    }
+  }
 
   async function onSubmit(values: LibraryFormValues) {
     if (logoFile) {
@@ -177,6 +225,12 @@ export function LibraryForm({
 
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
+      {mode === "create" ? (
+        <AiAutofillBar
+          onField={handleAutofillField}
+          onFinish={handleAutofillFinish}
+        />
+      ) : null}
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <div className="flex flex-col gap-4">
           <Card>
@@ -189,6 +243,7 @@ export function LibraryForm({
                 error={errors.name?.message}
                 htmlFor="library-name"
                 label="名称"
+                meta={fieldMeta.name}
               >
                 <Input id="library-name" {...register("name")} />
               </FormFieldShell>
@@ -196,6 +251,7 @@ export function LibraryForm({
                 error={errors.slug?.message}
                 htmlFor="library-slug"
                 label="Slug（URL 标识）"
+                meta={fieldMeta.slug}
               >
                 <Input
                   id="library-slug"
@@ -208,6 +264,7 @@ export function LibraryForm({
                 error={errors.description?.message}
                 htmlFor="library-description"
                 label="简介"
+                meta={fieldMeta.description}
               >
                 <Textarea
                   id="library-description"
@@ -219,6 +276,7 @@ export function LibraryForm({
                 error={errors.website?.message}
                 htmlFor="library-website"
                 label="官网地址"
+                meta={fieldMeta.website}
               >
                 <Input
                   id="library-website"
@@ -230,6 +288,7 @@ export function LibraryForm({
                 error={errors.github?.message}
                 htmlFor="library-github"
                 label="GitHub 仓库（可选）"
+                meta={fieldMeta.github}
               >
                 <Input
                   id="library-github"
@@ -244,6 +303,7 @@ export function LibraryForm({
                 label="Logo（可选）"
               >
                 <LogoField
+                  collectSignal={logoCollectSignal}
                   file={logoFile}
                   github={watchedGithub}
                   id="library-logo"
@@ -282,6 +342,7 @@ export function LibraryForm({
               <FormFieldShell
                 error={errors.deliveries?.message}
                 label="交付类型"
+                meta={fieldMeta.deliveries}
               >
                 <Controller
                   control={control}
@@ -295,7 +356,11 @@ export function LibraryForm({
                   )}
                 />
               </FormFieldShell>
-              <FormFieldShell error={errors.useCases?.message} label="使用场景">
+              <FormFieldShell
+                error={errors.useCases?.message}
+                label="使用场景"
+                meta={fieldMeta.useCases}
+              >
                 <Controller
                   control={control}
                   name="useCases"
@@ -324,6 +389,7 @@ export function LibraryForm({
               <FormFieldShell
                 error={errors.source?.message}
                 label="源码开放程度"
+                meta={fieldMeta.source}
               >
                 <Controller
                   control={control}
@@ -352,7 +418,11 @@ export function LibraryForm({
                   )}
                 />
               </FormFieldShell>
-              <FormFieldShell error={errors.pricing?.message} label="收费模式">
+              <FormFieldShell
+                error={errors.pricing?.message}
+                label="收费模式"
+                meta={fieldMeta.pricing}
+              >
                 <Controller
                   control={control}
                   name="pricing"
@@ -380,7 +450,11 @@ export function LibraryForm({
                   )}
                 />
               </FormFieldShell>
-              <FormFieldShell error={errors.access?.message} label="访问方式">
+              <FormFieldShell
+                error={errors.access?.message}
+                label="访问方式"
+                meta={fieldMeta.access}
+              >
                 <Controller
                   control={control}
                   name="access"
@@ -431,7 +505,11 @@ export function LibraryForm({
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <FormFieldShell error={errors.tags?.message} label="标签列表">
+              <FormFieldShell
+                error={errors.tags?.message}
+                label="标签列表"
+                meta={fieldMeta.tags}
+              >
                 <Controller
                   control={control}
                   name="tags"

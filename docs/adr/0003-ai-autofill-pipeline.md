@@ -1,0 +1,45 @@
+# ADR 0003: AI 自动填充产线（第一版）
+
+- 状态：已接受
+- 日期：2026-09-04
+
+## 背景
+
+人工收录一个 shadcn/ui 生态库需要调研官网、GitHub 仓库，再手工填写 `LibraryForm`（14 个字段，schema 见 `src/lib/library-form-schema.ts`），效率低。用户希望搭建一条"给出网址 → agent 自动采集信息并填充表单 → 人工审核提交"的产线。
+
+约束事实：
+
+1. 项目 AI/LLM 依赖为零；正文采集仅有 `src/lib/icon-resolver.ts` 的手写正则 HTML 解析。
+2. 已有"服务端采集 → 前端预览 → 确认入库"先例：`fetchLibraryLogoAction`、`fetchGithubMetricsAction`（`src/app/admin/actions.ts`）。
+3. 本版本 Next.js（^16.3.4）中 **Server Actions 不支持流式返回部分结果**（单次往返、整体序列化，见 `node_modules/next/dist/docs/01-app/02-guides/server-actions.md`）；Route Handler 返回 `ReadableStream` 是官方支持的流式路径（`streaming.md:484-506`）。
+4. 客户端消费流式的官方推荐方式是 `fetch` + `res.body.getReader()` + `TextDecoder`（`streaming.md:737-758`）。
+5. AI SDK（`ai` 包）支持 agent 工具循环（`streamText` + `tools` + `stopWhen`）与 `Output.object` 结构化输出的组合；`fullStream` 提供 `tool-call`/`tool-result`/delta 事件，可经 `TransformStream` 转为自定 SSE（官方 custom-stream-format recipe）。
+6. 部署于 Netlify：同步函数执行上限 **60 秒（不可配置）**，流式响应载荷上限 20MB。
+
+## 决策
+
+1. **入口形态：嵌入现有新建页**。在 `admin/libraries/new` 页面顶部加"输入 URL，AI 自动填充"入口，结果**预填进现有 `LibraryForm`**，用户在表单中审核修改后走既有 `createLibraryAction` 提交。不做独立向导页，不做 CLI 批量。第一版单条流，批量（多 URL 排队）后置。
+2. **运行时体验：步骤流水线 + 字段流式同时展示**。不做"处理中"转圈黑盒：agent 的每次工具调用实时上屏（"抓取官网 ✓ → 抓取 GitHub ✓ → 提取字段中…"），字段值随 LLM 生成流式填入表单（description 打字机效果）。
+3. **采集与提取：agent 自主工具循环（非固定编排）**。使用 `streamText` + `tools` + `stopWhen`，LLM 自主决定抓什么、抓几次（如先抓官网 → 发现有 GitHub 链接则抓 README → pricing 信息不足再抓子页面），认为材料充分后产出字段。推翻早期"代码固定编排 Jina + GitHub 抓取顺序"的方案：组件库官网结构各异，固定编排无法覆盖"信息在子页面"的场景；工具调用事件天然映射为 `step` 事件，实时步骤显示不额外造机制。
+4. **工具集：精简两件套**。`fetch_page(url)`（经 Jina Reader 抓任意页面 markdown，可跟进子页面）+ `fetch_github_repo(owner, repo)`（GitHub API，README + 仓库元数据一次拿全）。不提供 web 搜索（输入已有明确 URL，伪需求）与细粒度仓库翻文件工具（对填表单无增量价值）——工具越多 LLM 越易绕路烧预算。
+5. **LLM 集成：`ToolLoopAgent` + `Output.object` 结构化收尾**。使用 AI SDK 官方推荐的 agent 抽象 `new ToolLoopAgent({ model, instructions, tools, stopWhen, output })`（`ai` 包）而非裸 `streamText` 手工拼循环——官方文档明确 ToolLoopAgent 是大多数场景的推荐路径（自管理循环与消息数组），且 `agent.stream()` 返回 `StreamTextResult`，`fullStream` 事件面不变。构造器直接配置 `output: Output.object({ schema })`（结构化生成计一步，`stopWhen` 相应 +1）：agent 采集完材料后自动进入最终生成，object delta 即字段流式来源。不用 `WorkflowAgent`（`@ai-sdk/workflow`，持久化运行时为长时任务设计，45s 单发请求用不上且多一个运行时依赖）；不用 `streamObject`（单次生成无工具循环）；不用 `useObject`。
+6. **description 策略：AI 提炼统一风格的英文简介**。不照抄官网原文，由 LLM 将官网/README 内容精炼为英文简介；风格基准取自存量数据——以站内现有条目的 description 提炼 few-shot 示例写进 prompt，保证新条目与存量数据风格（语言、长度、句式）一致，不引入新的风格变量。
+7. **审核精细度：字段级来源/置信度标注**。LLM 输出为 `{ value, source, confidence }` 三元组，预填进表单后每个 AI 字段带来源角标（如"来自 GitHub README"），可疑字段高亮，未采集到的字段留空由人工补。
+8. **传输协议：自定 SSE，不使用 `useObject`**。新建 Route Handler 返回 `text/event-stream`：AI SDK `fullStream`（`tool-call`/`tool-result`/`text-delta`/object delta 等事件）经 `TransformStream` 映射为三类自定事件——`step`（agent 工具调用即流水线步骤）、`field`（字段值/来源/置信度增量）、`done`/`error`，客户端用 `fetch` + reader 手动解析。选自定协议而非 `useObject` 的原因：需要同时承载步骤进度与字段内容两种事件，`useObject` 只覆盖后者。
+9. **slug 由 LLM 建议、人工裁决**：LLM 从 name 派生建议值（受 kebab-case schema 约束），提交时复用现有唯一性校验，冲突时报错由用户手改。不做自动后缀——slug 是编辑决策，`-2` 会产生丑标识符。
+10. **LLM 接入走 OpenAI 兼容接口**：使用 `@ai-sdk/openai-compatible` provider，`baseURL` / `apiKey` / `model` 全部由环境变量配置，不绑定任何具体厂商（DeepSeek、z.ai GLM 等均可切换）。
+11. **失败降级：部分成功，不自动重试**：单个工具调用失败（Jina 超时、GitHub 404 等）作为结果返回给 agent，由其决定换路径还是放弃该来源；若 agent 最终未产出完整字段，用已采集材料能填几个填几个，缺失字段标"未采集到"留空。审核制下部分结果仍有价值；自动重试会烧穿函数预算，失败后用户手动重跑即可。
+12. **原始材料仅会话内保留**：审核面板可展开查看本次抓取的官网 markdown / README 原文，便于核对 source/pricing 等判断字段；只存在于请求内存与前端 state，不落库、不进 R2。
+13. **串联 Logo 抓取，不串联 GitHub 指标**：AI 填充完成后自动触发现有 `fetchLibraryLogoAction`（预览确认后上传）；`fetchGithubMetricsAction` 保持手动——指标是收录后的运维快照，与"录入条目"是不同生命周期。
+14. **SSE 路由鉴权沿用 ADR 0002 语义**：`auth()` + `isAdminSession()` 判定，非 admin 返回 404（不暴露端点存在），不复用 `requireAdmin()`（其 redirect/notFound 语义不适配 Route Handler）。
+15. **预算与护栏**：`stopWhen: isStepCount(8)`（约 5 次工具调用 + 2 次推理步 + 1 次结构化输出）；每个 fetch 工具 15s 超时；`agent.stream()` 原生支持 `timeout` / `abortSignal`，整体设 55s 硬超时（`AbortSignal.timeout(55_000)`）兜底 Netlify 60s 函数硬顶。超时中断时无最终结构化输出，但 `field` 事件是增量推送的，客户端已收到的部分字段不丢失，仍可走部分成功审核路径。流水线预算估计：Jina 抓取 ~10s/页 + GitHub ~1s + LLM 流式 ~20s，约 30s 常态在预算内。
+16. **依赖面收敛**：新增 `ai` + `@ai-sdk/openai-compatible` 两个包；采集用原生 fetch（Jina Reader 是 GET 接口，GitHub API 沿用现有 `github-metrics-fetcher` 模式），不引入 cheerio/firecrawl。
+
+## 后果
+
+- 表单校验、入库、Logo 上传链路全部复用，新增面收敛为：一个流式 Route Handler（agent 工具循环 + SSE 转换）、`fetch_page`/`fetch_github_repo` 两个工具、一个表单顶部入口组件、字段角标 UI、原始材料查看面板。
+- 引入外部运行时依赖：OpenAI 兼容接口（计费，环境变量配置）与 Jina Reader（免 key 限速使用，可选 `JINA_API_KEY` 提额度）。
+- agent 自主循环的采集路径不可预知，字段来源角标依赖 LLM 自报 + 工具调用记录交叉印证，准确率需在实测中校准。
+- 字段角标需要 `LibraryForm` 支持外部元数据注入，是其首次为 AI 预填做的改造。
+- 净新增环境变量：`AI_BASE_URL`、`AI_API_KEY`、`AI_MODEL`，可选 `JINA_API_KEY`。
+- 若未来做批量（多 URL 排队），受 60s 函数上限约束，需改后台函数（Netlify Background Functions，15min）另立 ADR。

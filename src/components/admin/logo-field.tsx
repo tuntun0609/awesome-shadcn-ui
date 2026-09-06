@@ -31,6 +31,8 @@ function decodeBase64(base64: string) {
 }
 
 interface LogoFieldProps {
+  /** 外部触发的采集信号（每次自增触发一次自动采集），0 表示不触发。 */
+  collectSignal: number;
   file: File | null;
   /** 用于自动采集的 GitHub 仓库地址（来自表单，空串表示未填写）。 */
   github: string;
@@ -46,6 +48,7 @@ interface LogoFieldProps {
 }
 
 export function LogoField({
+  collectSignal,
   file,
   github,
   id,
@@ -81,6 +84,16 @@ export function LogoField({
     setPendingUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [pending]);
+
+  // AI 填充完成后由表单触发自动采集（collectSignal 自增一次即尝试采集一次）
+  const collectRef = useRef(collectSignal);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 仅响应信号变化，采集条件取当下闭包值即可
+  useEffect(() => {
+    if (collectSignal > collectRef.current && website !== "" && !collecting) {
+      collectLogo();
+    }
+    collectRef.current = collectSignal;
+  }, [collectSignal]);
 
   async function collectLogo() {
     setCollecting(true);

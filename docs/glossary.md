@@ -15,3 +15,9 @@
 | Runtime source of truth | Turso/libSQL, the only persistence source read by public application routes. |
 | Admin role | The value `admin` stored in a Clerk user's `publicMetadata.role`; the only grant that unlocks `/admin`. |
 | RequireAdmin | The server-side guard in `src/lib/admin-auth.ts` that redirects anonymous requests to sign-in, returns 404 for non-admin sessions, and gates every admin page and server action. |
+| AI autofill | The admin pipeline where an autonomous agent (tool loop) fetches the target site via `fetch_page`/`fetch_github_repo` tools, then produces `libraryFormSchema` fields as structured output, streamed for human review in `LibraryForm`. |
+| Step event | An SSE event reporting agent progress (typically a tool call such as "fetching website"), rendered live in the autofill panel. |
+| Field event | An SSE event carrying one field's value plus provenance (source, confidence), streamed into the form with a badge. |
+| Provenance | The `{ source, confidence }` metadata attached to each AI-filled field indicating which fetched material it came from and how certain the LLM was. |
+| OpenAI-compatible endpoint | The user-configured LLM interface (`AI_BASE_URL` + `AI_MODEL` + `AI_API_KEY`) accessed through `@ai-sdk/openai-compatible`; no vendor is hard-coded. |
+| Raw material | The markdown fetched from the target website and GitHub README during one autofill run; kept in memory only for in-panel review, never persisted. |
