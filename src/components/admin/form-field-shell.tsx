@@ -1,4 +1,4 @@
-import type { AutofillFieldMeta } from "@/lib/ai/autofill-events";
+import type { AutofillFieldMeta } from "@/lib/ai/autofill-schema";
 import { cn } from "@/lib/utils";
 
 interface FormFieldShellProps {

@@ -28,7 +28,7 @@
 8. **传输协议：自定 SSE，不使用 `useObject`**。新建 Route Handler 返回 `text/event-stream`：AI SDK `fullStream`（`tool-call`/`tool-result`/`text-delta`/object delta 等事件）经 `TransformStream` 映射为三类自定事件——`step`（agent 工具调用即流水线步骤）、`field`（字段值/来源/置信度增量）、`done`/`error`，客户端用 `fetch` + reader 手动解析。选自定协议而非 `useObject` 的原因：需要同时承载步骤进度与字段内容两种事件，`useObject` 只覆盖后者。
 9. **slug 由 LLM 建议、人工裁决**：LLM 从 name 派生建议值（受 kebab-case schema 约束），提交时复用现有唯一性校验，冲突时报错由用户手改。不做自动后缀——slug 是编辑决策，`-2` 会产生丑标识符。
 10. **LLM 接入走 OpenAI 兼容接口**：使用 `@ai-sdk/openai-compatible` provider，`baseURL` / `apiKey` / `model` 全部由环境变量配置，不绑定任何具体厂商（DeepSeek、z.ai GLM 等均可切换）。
-11. **失败降级：部分成功，不自动重试**：单个工具调用失败（Jina 超时、GitHub 404 等）作为结果返回给 agent，由其决定换路径还是放弃该来源；若 agent 最终未产出完整字段，用已采集材料能填几个填几个，缺失字段标"未采集到"留空。审核制下部分结果仍有价值；自动重试会烧穿函数预算，失败后用户手动重跑即可。
+11. **失败降级：部分成功，不自动重试**：单个工具调用失败（Jina 超时、GitHub 404 等）作为结果返回给 agent，由其决定换路径还是放弃该来源；若 agent 最终未产出完整字段，用已采集材料能填几个填几个，缺失字段标"未采集到"留空。审核制下部分结果仍有价值；自动重试会烧穿函数预算，失败后用户手动重跑即可。例外——工具内部的廉价纠正不烧 LLM 预算：`fetch_page` 在 Reader（r.jina.ai）不可达时降级直连目标站点抓原始 HTML（手写极简 HTML 转文本，链接保留为 `text (url)`）；`fetch_github_repo` 在 404 时经 GitHub Search 自动纠正仓库名（两轮查询处理连字符变体）并返回 `resolvedRepo`。
 12. **原始材料仅会话内保留**：审核面板可展开查看本次抓取的官网 markdown / README 原文，便于核对 source/pricing 等判断字段；只存在于请求内存与前端 state，不落库、不进 R2。
 13. **串联 Logo 抓取，不串联 GitHub 指标**：AI 填充完成后自动触发现有 `fetchLibraryLogoAction`（预览确认后上传）；`fetchGithubMetricsAction` 保持手动——指标是收录后的运维快照，与"录入条目"是不同生命周期。
 14. **SSE 路由鉴权沿用 ADR 0002 语义**：`auth()` + `isAdminSession()` 判定，非 admin 返回 404（不暴露端点存在），不复用 `requireAdmin()`（其 redirect/notFound 语义不适配 Route Handler）。
