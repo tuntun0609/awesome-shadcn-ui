@@ -23,6 +23,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { toast } from "sonner";
+import { ChatMarkdown } from "@/components/admin/chat-markdown";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -321,10 +322,10 @@ function MessageView({
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex min-w-0 flex-col gap-2">
       {text === "" ? null : (
-        <div className="max-w-[95%] whitespace-pre-wrap rounded-2xl bg-muted px-3 py-2 text-sm">
-          {text}
+        <div className="min-w-0 max-w-[95%] rounded-2xl bg-muted px-3 py-2 text-sm">
+          <ChatMarkdown>{text}</ChatMarkdown>
         </div>
       )}
       {toolParts.map((part) => (
@@ -608,8 +609,8 @@ export function AiAutofillChat({
               {material?.url}
             </DialogDescription>
           </DialogHeader>
-          <div className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap rounded-xl bg-muted/50 p-4 font-mono text-xs">
-            {material?.content}
+          <div className="max-h-[60vh] min-w-0 overflow-y-auto rounded-xl bg-muted/50 p-4">
+            <ChatMarkdown>{material?.content ?? ""}</ChatMarkdown>
           </div>
         </DialogContent>
       </Dialog>
