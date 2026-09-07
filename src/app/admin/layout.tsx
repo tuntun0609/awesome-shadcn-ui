@@ -38,7 +38,7 @@ export default async function AdminLayout({
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
             <SidebarProvider defaultOpen={sidebarState}>
               <AppSidebar />
-              <SidebarInset>
+              <SidebarInset className="min-w-0 [--ai-sidebar-width:22rem] xl:has-[[data-ai-sidebar=open]]:mr-(--ai-sidebar-width) 2xl:[--ai-sidebar-width:24rem]">
                 <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
                   <SidebarTrigger className="-ml-1" />
                   <span className="text-muted-foreground text-sm">

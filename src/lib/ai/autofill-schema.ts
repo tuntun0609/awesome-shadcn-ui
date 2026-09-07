@@ -24,20 +24,37 @@ export interface AutofillFieldMeta {
   source?: string;
 }
 
-/** 客户端工具 fill_field 的输入（ADR 0003 决策 #7：字段级 provenance 标注）。 */
+/** 批量回填中的单个字段，值在客户端独立校验。 */
 export const fillFieldInputSchema = z.object({
   confidence: z.number().min(0).max(1),
   field: z.enum(AUTOFILL_FIELD_NAMES),
-  source: z.string().min(1),
-  value: z.unknown(),
+  source: z.string(),
+  value: z.union([z.string(), z.array(z.string())]),
 });
 
 export type FillFieldInput = z.output<typeof fillFieldInputSchema>;
 
-/** fill_field 的执行结果：校验失败时返回错误供 agent 自愈。 */
-export interface FillFieldOutput {
+export const fillFieldsInputSchema = z.object({
+  fields: z.array(fillFieldInputSchema).min(1).max(AUTOFILL_FIELD_NAMES.length),
+});
+
+export type FillFieldsInput = z.output<typeof fillFieldsInputSchema>;
+export type FillFieldStatus = "filled" | "review" | "protected" | "invalid";
+
+export interface FillFieldResult {
   error?: string;
+  field: AutofillFieldName;
+  status: FillFieldStatus;
+}
+
+export interface FillFieldsOutput {
   ok: boolean;
+  results: FillFieldResult[];
+}
+
+export function needsAutofillReview(meta: AutofillFieldMeta) {
+  const source = meta.source?.trim().toLowerCase();
+  return !source || source === "n/a" || (meta.confidence ?? 0) < 0.7;
 }
 
 /** fetch_page 的输出（与 tools.ts 中工具的返回结构一致）。 */
@@ -72,9 +89,9 @@ export type AutofillChatMessage = UIMessage<
       input: { url: string };
       output: FetchPageOutput;
     };
-    fill_field: {
-      input: FillFieldInput;
-      output: FillFieldOutput;
+    fill_fields: {
+      input: FillFieldsInput;
+      output: FillFieldsOutput;
     };
   }
 >;

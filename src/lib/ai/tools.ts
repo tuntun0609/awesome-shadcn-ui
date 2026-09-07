@@ -1,6 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { fillFieldInputSchema } from "@/lib/ai/autofill-schema";
+import { fillFieldsInputSchema } from "@/lib/ai/autofill-schema";
 
 /** 单个采集工具的超时（ADR 0003 决策 #15）。 */
 const TOOL_TIMEOUT_MS = 15_000;
@@ -239,20 +239,20 @@ const fetchGithubRepoTool = tool({
 });
 
 /**
- * 客户端工具：把单个字段写入表单（无 execute，由浏览器端
+ * 客户端工具：把多个字段批量写入表单（无 execute，由浏览器端
  * useChat 的 onToolCall 执行并回传结果）。
  */
-const fillFieldTool = tool({
+const fillFieldsTool = tool({
   description:
-    "Fill a single field of the catalog entry form shown to the admin. Call once per field with the value, the material it came from, and your confidence (0-1). The client validates the value and returns an error if it does not fit the field.",
-  inputSchema: fillFieldInputSchema,
+    "Fill multiple catalog fields in ONE call after gathering material. Each entry includes field, value, source and confidence (0-1). The client validates each field independently and protects manual edits. Only retry invalid fields; never retry protected fields.",
+  inputSchema: fillFieldsInputSchema,
 });
 
-/** 构造 agent 工具集（ADR 0003 决策 #4：精简两件套 + 客户端 fill_field）。 */
+/** 构造 agent 工具集（ADR 0003 决策 #4：精简两件套 + 客户端 fill_fields）。 */
 export function createAutofillTools() {
   return {
     fetch_github_repo: fetchGithubRepoTool,
     fetch_page: fetchPageTool,
-    fill_field: fillFieldTool,
+    fill_fields: fillFieldsTool,
   };
 }

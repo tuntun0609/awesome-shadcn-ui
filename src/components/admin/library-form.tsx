@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { SaveIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import {
@@ -15,7 +15,10 @@ import {
   uploadLibraryLogoAction,
 } from "@/app/admin/actions";
 import { AiAutofillChat } from "@/components/admin/ai-autofill-chat";
-import { FormFieldShell } from "@/components/admin/form-field-shell";
+import {
+  type AutofillCandidate,
+  FormFieldShell,
+} from "@/components/admin/form-field-shell";
 import { LogoField } from "@/components/admin/logo-field";
 import { TagInput } from "@/components/admin/tag-input";
 import { Button } from "@/components/ui/button";
@@ -37,7 +40,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import type { AutofillFieldMeta } from "@/lib/ai/autofill-schema";
+import {
+  type AutofillFieldMeta,
+  type AutofillFieldName,
+  needsAutofillReview,
+} from "@/lib/ai/autofill-schema";
 import {
   LIBRARY_ACCESS_OPTIONS,
   LIBRARY_DELIVERY_OPTIONS,
@@ -48,21 +55,6 @@ import {
   type LibraryFormValues,
   libraryFormSchema,
 } from "@/lib/library-form-schema";
-
-/** AI 填充可写入的表单字段（addedAt / logo / featuredRank 不属于 AI 职责）。 */
-const AUTOFILLABLE_FIELDS = new Set([
-  "access",
-  "deliveries",
-  "description",
-  "github",
-  "name",
-  "pricing",
-  "slug",
-  "source",
-  "tags",
-  "useCases",
-  "website",
-]);
 
 type FieldMetaMap = Partial<Record<keyof LibraryFormInput, AutofillFieldMeta>>;
 
@@ -131,12 +123,18 @@ export function LibraryForm({
   const router = useRouter();
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [fieldMeta, setFieldMeta] = useState<FieldMetaMap>({});
+  const manualFields = useRef(new Set<AutofillFieldName>());
+  const collectedWebsite = useRef("");
+  const [candidates, setCandidates] = useState<
+    Partial<Record<AutofillFieldName, AutofillCandidate>>
+  >({});
   const [logoCollectSignal, setLogoCollectSignal] = useState(0);
   const {
     control,
     formState: { errors, isDirty, isSubmitting },
     handleSubmit,
-    register,
+    register: registerField,
+    getValues,
     setError,
     setValue,
   } = useForm<LibraryFormInput, unknown, LibraryFormValues>({
@@ -148,29 +146,86 @@ export function LibraryForm({
   const watchedName = useWatch({ control, name: "name" }) ?? "";
   const watchedWebsite = useWatch({ control, name: "website" }) ?? "";
 
-  /** AI 填充字段事件：流式写入表单并记录 provenance 角标。 */
-  function handleAutofillField(
-    field: string,
-    value: unknown,
-    meta: AutofillFieldMeta
-  ) {
-    if (!AUTOFILLABLE_FIELDS.has(field)) {
-      return;
-    }
-    if (value !== undefined) {
-      setValue(field as keyof LibraryFormInput, value as never, {
-        shouldDirty: true,
-      });
-    }
-    setFieldMeta((prev) => ({
-      ...prev,
-      [field]: { confidence: meta.confidence, source: meta.source },
-    }));
+  function markManual(field: AutofillFieldName) {
+    manualFields.current.add(field);
+    setFieldMeta((prev) => ({ ...prev, [field]: undefined }));
   }
 
-  /** AI 填充结束：自动触发 Logo 采集（ADR 0003 决策 #13）。 */
+  function register(field: keyof LibraryFormInput) {
+    return registerField(field, {
+      onChange: () => {
+        if (
+          field !== "addedAt" &&
+          field !== "logo" &&
+          field !== "featuredRank"
+        ) {
+          markManual(field);
+        }
+      },
+    });
+  }
+
+  function writeAutofill(
+    field: AutofillFieldName,
+    value: string | string[],
+    meta: AutofillFieldMeta
+  ) {
+    setValue(field, value, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    setFieldMeta((prev) => ({ ...prev, [field]: meta }));
+    setCandidates((prev) => ({ ...prev, [field]: undefined }));
+  }
+
+  function handleAutofillField(
+    field: AutofillFieldName,
+    value: string | string[],
+    meta: AutofillFieldMeta
+  ) {
+    if (manualFields.current.has(field)) {
+      setCandidates((prev) => ({ ...prev, [field]: { meta, value } }));
+      return "protected" as const;
+    }
+    writeAutofill(field, value, meta);
+    return needsAutofillReview(meta)
+      ? ("review" as const)
+      : ("filled" as const);
+  }
+
+  function keepCurrent(field: AutofillFieldName) {
+    setCandidates((prev) => ({ ...prev, [field]: undefined }));
+  }
+
+  function useCandidate(field: AutofillFieldName) {
+    const candidate = candidates[field];
+    if (!candidate) {
+      return;
+    }
+    manualFields.current.delete(field);
+    writeAutofill(field, candidate.value, candidate.meta);
+  }
+
+  function reviewProps(field: AutofillFieldName) {
+    return {
+      candidate: candidates[field],
+      currentValue: getValues(field),
+      fieldName: field,
+      onKeepCurrent: keepCurrent,
+      onUseCandidate: useCandidate,
+    };
+  }
+
+  /** 同一官网仅自动采集一次，已有 Logo 或上传文件时保留。 */
   function handleAutofillFinish() {
-    if (watchedWebsite !== "") {
+    const website = getValues("website");
+    if (
+      website &&
+      website !== collectedWebsite.current &&
+      !getValues("logo") &&
+      !logoFile
+    ) {
+      collectedWebsite.current = website;
       setLogoCollectSignal((signal) => signal + 1);
     }
   }
@@ -225,304 +280,341 @@ export function LibraryForm({
 
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-start">
+      <div className="flex flex-col gap-4">
         {mode === "create" ? (
           <AiAutofillChat
             onField={handleAutofillField}
             onRoundFinish={handleAutofillFinish}
           />
         ) : null}
-        <div className="grid min-w-0 flex-1 items-start gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-          <div className="flex flex-col gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>基本信息</CardTitle>
-                <CardDescription>
-                  组件库的名称、简介与相关链接。
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-4 md:grid-cols-2">
-                <FormFieldShell
-                  error={errors.name?.message}
-                  htmlFor="library-name"
-                  label="名称"
-                  meta={fieldMeta.name}
-                >
-                  <Input id="library-name" {...register("name")} />
-                </FormFieldShell>
-                <FormFieldShell
-                  error={errors.slug?.message}
-                  htmlFor="library-slug"
-                  label="Slug（URL 标识）"
-                  meta={fieldMeta.slug}
-                >
-                  <Input
-                    id="library-slug"
-                    placeholder="如 magicui"
-                    {...register("slug")}
-                  />
-                </FormFieldShell>
-                <FormFieldShell
-                  className="md:col-span-2"
-                  error={errors.description?.message}
-                  htmlFor="library-description"
-                  label="简介"
-                  meta={fieldMeta.description}
-                >
-                  <Textarea
-                    id="library-description"
-                    rows={3}
-                    {...register("description")}
-                  />
-                </FormFieldShell>
-                <FormFieldShell
-                  error={errors.website?.message}
-                  htmlFor="library-website"
-                  label="官网地址"
-                  meta={fieldMeta.website}
-                >
-                  <Input
-                    id="library-website"
-                    placeholder="https://example.com"
-                    {...register("website")}
-                  />
-                </FormFieldShell>
-                <FormFieldShell
-                  error={errors.github?.message}
-                  htmlFor="library-github"
-                  label="GitHub 仓库（可选）"
-                  meta={fieldMeta.github}
-                >
-                  <Input
-                    id="library-github"
-                    placeholder="https://github.com/owner/repo"
-                    {...register("github")}
-                  />
-                </FormFieldShell>
-                <FormFieldShell
-                  className="md:col-span-2"
-                  error={errors.logo?.message}
-                  htmlFor="library-logo"
-                  label="Logo（可选）"
-                >
-                  <LogoField
-                    collectSignal={logoCollectSignal}
-                    file={logoFile}
-                    github={watchedGithub}
-                    id="library-logo"
-                    logoKey={watchedLogo}
-                    name={watchedName}
-                    onFileChange={setLogoFile}
-                    onRemove={() => {
-                      setLogoFile(null);
-                      setValue("logo", "", { shouldDirty: true });
-                    }}
-                    website={watchedWebsite}
-                  />
-                </FormFieldShell>
-                <FormFieldShell
-                  error={errors.addedAt?.message}
-                  htmlFor="library-added-at"
-                  label="收录日期"
-                >
-                  <Input
-                    id="library-added-at"
-                    type="date"
-                    {...register("addedAt")}
-                  />
-                </FormFieldShell>
-              </CardContent>
-            </Card>
+        <div className="@container/form min-w-0 flex-1">
+          <div className="grid @4xl/form:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] items-start gap-4">
+            <div className="flex flex-col gap-4">
+              <Card className="@container/card min-w-0">
+                <CardHeader>
+                  <CardTitle>基本信息</CardTitle>
+                  <CardDescription>
+                    组件库的名称、简介与相关链接。
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="grid @lg/card:grid-cols-2 gap-4">
+                  <FormFieldShell
+                    error={errors.name?.message}
+                    htmlFor="library-name"
+                    label="名称"
+                    meta={fieldMeta.name}
+                    {...reviewProps("name")}
+                  >
+                    <Input id="library-name" {...register("name")} />
+                  </FormFieldShell>
+                  <FormFieldShell
+                    error={errors.slug?.message}
+                    htmlFor="library-slug"
+                    label="Slug（URL 标识）"
+                    meta={fieldMeta.slug}
+                    {...reviewProps("slug")}
+                  >
+                    <Input
+                      id="library-slug"
+                      placeholder="如 magicui"
+                      {...register("slug")}
+                    />
+                  </FormFieldShell>
+                  <FormFieldShell
+                    className="@lg/card:col-span-2"
+                    error={errors.description?.message}
+                    htmlFor="library-description"
+                    label="简介"
+                    meta={fieldMeta.description}
+                    {...reviewProps("description")}
+                  >
+                    <Textarea
+                      id="library-description"
+                      rows={3}
+                      {...register("description")}
+                    />
+                  </FormFieldShell>
+                  <FormFieldShell
+                    error={errors.website?.message}
+                    htmlFor="library-website"
+                    label="官网地址"
+                    meta={fieldMeta.website}
+                    {...reviewProps("website")}
+                  >
+                    <Input
+                      id="library-website"
+                      placeholder="https://example.com"
+                      {...register("website")}
+                    />
+                  </FormFieldShell>
+                  <FormFieldShell
+                    error={errors.github?.message}
+                    htmlFor="library-github"
+                    label="GitHub 仓库（可选）"
+                    meta={fieldMeta.github}
+                    {...reviewProps("github")}
+                  >
+                    <Input
+                      id="library-github"
+                      placeholder="https://github.com/owner/repo"
+                      {...register("github")}
+                    />
+                  </FormFieldShell>
+                  <FormFieldShell
+                    className="@lg/card:col-span-2"
+                    error={errors.logo?.message}
+                    htmlFor="library-logo"
+                    label="Logo（可选）"
+                  >
+                    <LogoField
+                      collectSignal={logoCollectSignal}
+                      file={logoFile}
+                      github={watchedGithub}
+                      id="library-logo"
+                      logoKey={watchedLogo}
+                      name={watchedName}
+                      onFileChange={setLogoFile}
+                      onRemove={() => {
+                        setLogoFile(null);
+                        setValue("logo", "", { shouldDirty: true });
+                      }}
+                      website={watchedWebsite}
+                    />
+                  </FormFieldShell>
+                  <FormFieldShell
+                    error={errors.addedAt?.message}
+                    htmlFor="library-added-at"
+                    label="收录日期"
+                  >
+                    <Input
+                      id="library-added-at"
+                      type="date"
+                      {...register("addedAt")}
+                    />
+                  </FormFieldShell>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>交付类型与使用场景</CardTitle>
-                <CardDescription>
-                  勾选该组件库提供的内容类型及适用场景。
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-4">
-                <FormFieldShell
-                  error={errors.deliveries?.message}
-                  label="交付类型"
-                  meta={fieldMeta.deliveries}
-                >
-                  <Controller
-                    control={control}
-                    name="deliveries"
-                    render={({ field }) => (
-                      <CheckboxGroup
-                        onChange={field.onChange}
-                        options={LIBRARY_DELIVERY_OPTIONS}
-                        value={field.value}
-                      />
-                    )}
-                  />
-                </FormFieldShell>
-                <FormFieldShell
-                  error={errors.useCases?.message}
-                  label="使用场景"
-                  meta={fieldMeta.useCases}
-                >
-                  <Controller
-                    control={control}
-                    name="useCases"
-                    render={({ field }) => (
-                      <CheckboxGroup
-                        onChange={field.onChange}
-                        options={LIBRARY_USE_CASE_OPTIONS}
-                        value={field.value}
-                      />
-                    )}
-                  />
-                </FormFieldShell>
-              </CardContent>
-            </Card>
-          </div>
+              <Card className="@container/card min-w-0">
+                <CardHeader>
+                  <CardTitle>交付类型与使用场景</CardTitle>
+                  <CardDescription>
+                    勾选该组件库提供的内容类型及适用场景。
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-4">
+                  <FormFieldShell
+                    error={errors.deliveries?.message}
+                    label="交付类型"
+                    meta={fieldMeta.deliveries}
+                    {...reviewProps("deliveries")}
+                  >
+                    <Controller
+                      control={control}
+                      name="deliveries"
+                      render={({ field }) => (
+                        <CheckboxGroup
+                          onChange={(value) => {
+                            markManual(field.name);
+                            field.onChange(value);
+                          }}
+                          options={LIBRARY_DELIVERY_OPTIONS}
+                          value={field.value}
+                        />
+                      )}
+                    />
+                  </FormFieldShell>
+                  <FormFieldShell
+                    error={errors.useCases?.message}
+                    label="使用场景"
+                    meta={fieldMeta.useCases}
+                    {...reviewProps("useCases")}
+                  >
+                    <Controller
+                      control={control}
+                      name="useCases"
+                      render={({ field }) => (
+                        <CheckboxGroup
+                          onChange={(value) => {
+                            markManual(field.name);
+                            field.onChange(value);
+                          }}
+                          options={LIBRARY_USE_CASE_OPTIONS}
+                          value={field.value}
+                        />
+                      )}
+                    />
+                  </FormFieldShell>
+                </CardContent>
+              </Card>
+            </div>
 
-          <div className="flex flex-col gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>属性</CardTitle>
-                <CardDescription>
-                  组件库的源码开放程度、收费模式与访问方式。
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-4 sm:grid-cols-2">
-                <FormFieldShell
-                  error={errors.source?.message}
-                  label="源码开放程度"
-                  meta={fieldMeta.source}
-                >
-                  <Controller
-                    control={control}
-                    name="source"
-                    render={({ field }) => (
-                      <Select
-                        items={optionsToItems(LIBRARY_SOURCE_OPTIONS)}
-                        onValueChange={(value) => {
-                          if (value !== null && value !== undefined) {
-                            field.onChange(value);
-                          }
-                        }}
-                        value={field.value}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="请选择" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {LIBRARY_SOURCE_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                </FormFieldShell>
-                <FormFieldShell
-                  error={errors.pricing?.message}
-                  label="收费模式"
-                  meta={fieldMeta.pricing}
-                >
-                  <Controller
-                    control={control}
-                    name="pricing"
-                    render={({ field }) => (
-                      <Select
-                        items={optionsToItems(LIBRARY_PRICING_OPTIONS)}
-                        onValueChange={(value) => {
-                          if (value !== null && value !== undefined) {
-                            field.onChange(value);
-                          }
-                        }}
-                        value={field.value}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="请选择" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {LIBRARY_PRICING_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                </FormFieldShell>
-                <FormFieldShell
-                  error={errors.access?.message}
-                  label="访问方式"
-                  meta={fieldMeta.access}
-                >
-                  <Controller
-                    control={control}
-                    name="access"
-                    render={({ field }) => (
-                      <Select
-                        items={optionsToItems(LIBRARY_ACCESS_OPTIONS)}
-                        onValueChange={(value) => {
-                          if (value !== null && value !== undefined) {
-                            field.onChange(value);
-                          }
-                        }}
-                        value={field.value}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="请选择" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {LIBRARY_ACCESS_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                </FormFieldShell>
-                <FormFieldShell
-                  error={errors.featuredRank?.message}
-                  htmlFor="library-featured-rank"
-                  label="精选位次（可选，需唯一）"
-                >
-                  <Input
-                    id="library-featured-rank"
-                    inputMode="numeric"
-                    placeholder="留空表示未精选"
-                    {...register("featuredRank")}
-                  />
-                </FormFieldShell>
-              </CardContent>
-            </Card>
+            <div className="flex flex-col gap-4">
+              <Card className="@container/card min-w-0">
+                <CardHeader>
+                  <CardTitle>属性</CardTitle>
+                  <CardDescription>
+                    组件库的源码开放程度、收费模式与访问方式。
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="grid @lg/card:grid-cols-2 gap-4">
+                  <FormFieldShell
+                    error={errors.source?.message}
+                    label="源码开放程度"
+                    meta={fieldMeta.source}
+                    {...reviewProps("source")}
+                  >
+                    <Controller
+                      control={control}
+                      name="source"
+                      render={({ field }) => (
+                        <Select
+                          items={optionsToItems(LIBRARY_SOURCE_OPTIONS)}
+                          onValueChange={(value) => {
+                            if (value !== null && value !== undefined) {
+                              markManual(field.name);
+                              field.onChange(value);
+                            }
+                          }}
+                          value={field.value}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="请选择" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {LIBRARY_SOURCE_OPTIONS.map((option) => (
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
+                              >
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                  </FormFieldShell>
+                  <FormFieldShell
+                    error={errors.pricing?.message}
+                    label="收费模式"
+                    meta={fieldMeta.pricing}
+                    {...reviewProps("pricing")}
+                  >
+                    <Controller
+                      control={control}
+                      name="pricing"
+                      render={({ field }) => (
+                        <Select
+                          items={optionsToItems(LIBRARY_PRICING_OPTIONS)}
+                          onValueChange={(value) => {
+                            if (value !== null && value !== undefined) {
+                              markManual(field.name);
+                              field.onChange(value);
+                            }
+                          }}
+                          value={field.value}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="请选择" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {LIBRARY_PRICING_OPTIONS.map((option) => (
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
+                              >
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                  </FormFieldShell>
+                  <FormFieldShell
+                    error={errors.access?.message}
+                    label="访问方式"
+                    meta={fieldMeta.access}
+                    {...reviewProps("access")}
+                  >
+                    <Controller
+                      control={control}
+                      name="access"
+                      render={({ field }) => (
+                        <Select
+                          items={optionsToItems(LIBRARY_ACCESS_OPTIONS)}
+                          onValueChange={(value) => {
+                            if (value !== null && value !== undefined) {
+                              markManual(field.name);
+                              field.onChange(value);
+                            }
+                          }}
+                          value={field.value}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="请选择" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {LIBRARY_ACCESS_OPTIONS.map((option) => (
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
+                              >
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                  </FormFieldShell>
+                  <FormFieldShell
+                    error={errors.featuredRank?.message}
+                    htmlFor="library-featured-rank"
+                    label="精选位次（可选，需唯一）"
+                  >
+                    <Input
+                      id="library-featured-rank"
+                      inputMode="numeric"
+                      placeholder="留空表示未精选"
+                      {...register("featuredRank")}
+                    />
+                  </FormFieldShell>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>标签</CardTitle>
-                <CardDescription>
-                  用于前台搜索和筛选的自由文本标签。
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <FormFieldShell
-                  error={errors.tags?.message}
-                  label="标签列表"
-                  meta={fieldMeta.tags}
-                >
-                  <Controller
-                    control={control}
-                    name="tags"
-                    render={({ field }) => (
-                      <TagInput onChange={field.onChange} value={field.value} />
-                    )}
-                  />
-                </FormFieldShell>
-              </CardContent>
-            </Card>
+              <Card className="@container/card min-w-0">
+                <CardHeader>
+                  <CardTitle>标签</CardTitle>
+                  <CardDescription>
+                    用于前台搜索和筛选的自由文本标签。
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <FormFieldShell
+                    error={errors.tags?.message}
+                    label="标签列表"
+                    meta={fieldMeta.tags}
+                    {...reviewProps("tags")}
+                  >
+                    <Controller
+                      control={control}
+                      name="tags"
+                      render={({ field }) => (
+                        <TagInput
+                          onChange={(value) => {
+                            markManual(field.name);
+                            field.onChange(value);
+                          }}
+                          value={field.value}
+                        />
+                      )}
+                    />
+                  </FormFieldShell>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </div>

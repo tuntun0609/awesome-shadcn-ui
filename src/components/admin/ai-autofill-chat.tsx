@@ -15,7 +15,13 @@ import {
   SquareIcon,
   XIcon,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,23 +31,45 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
+import { applyAutofillBatch, FIELD_LABELS } from "@/lib/ai/autofill-client";
 import type {
   AutofillChatMessage,
   AutofillFieldMeta,
   AutofillFieldName,
+  FillFieldStatus,
 } from "@/lib/ai/autofill-schema";
-import { fillFieldInputSchema } from "@/lib/ai/autofill-schema";
-import { libraryFormSchema } from "@/lib/library-form-schema";
+import { fillFieldsInputSchema } from "@/lib/ai/autofill-schema";
 import { cn } from "@/lib/utils";
 
+const WIDE_QUERY = "(min-width: 1280px)";
+
+function subscribeWide(onChange: () => void) {
+  const query = window.matchMedia(WIDE_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+function getWideSnapshot() {
+  return window.matchMedia(WIDE_QUERY).matches;
+}
+function getServerWideSnapshot() {
+  return false;
+}
+
 interface AiAutofillChatProps {
-  /** 字段级回调：fill_field 客户端工具执行时回填表单。 */
+  /** 字段级回调：fill_fields 客户端工具执行时回填表单。 */
   onField: (
     field: AutofillFieldName,
-    value: unknown,
+    value: string | string[],
     meta: AutofillFieldMeta
-  ) => void;
+  ) => Exclude<FillFieldStatus, "invalid">;
   /** 每轮对话结束回调（正常结束才触发），用于触发 Logo 采集等后续动作。 */
   onRoundFinish: () => void;
 }
@@ -53,70 +81,10 @@ interface MaterialState {
   url: string;
 }
 
-/** 表单中值为字符串数组的字段。 */
-const ARRAY_FIELDS = new Set<AutofillFieldName>([
-  "deliveries",
-  "tags",
-  "useCases",
-]);
-
-/** 数组字段接受逗号 / 中文顿号分隔的字符串。 */
-const SEPARATOR_PATTERN = /[,，、]/;
-
-/** 值为字符串但字段要求数组时的宽容转换：JSON 数组文本或分隔符字符串。 */
-function coerceArrayInput(field: AutofillFieldName, value: unknown) {
-  if (
-    !ARRAY_FIELDS.has(field) ||
-    Array.isArray(value) ||
-    typeof value !== "string"
-  ) {
-    return value;
-  }
-  const text = value.trim();
-  if (text.startsWith("[")) {
-    try {
-      return JSON.parse(text);
-    } catch {
-      return value;
-    }
-  }
-  if (text === "") {
-    return [];
-  }
-  return text
-    .split(SEPARATOR_PATTERN)
-    .map((item) => item.trim())
-    .filter((item) => item !== "");
-}
-
 type ToolPart = Extract<
   AutofillChatMessage["parts"][number],
   { type: `tool-${string}` }
 >;
-
-const FIELD_LABELS: Record<AutofillFieldName, string> = {
-  access: "访问方式",
-  deliveries: "交付类型",
-  description: "简介",
-  github: "GitHub 仓库",
-  name: "名称",
-  pricing: "收费模式",
-  slug: "Slug",
-  source: "源码开放程度",
-  tags: "标签",
-  useCases: "使用场景",
-  website: "官网地址",
-};
-
-function formatValue(value: unknown) {
-  if (Array.isArray(value)) {
-    return value.join("、");
-  }
-  if (typeof value === "string") {
-    return value === "" ? "（空）" : value;
-  }
-  return JSON.stringify(value);
-}
 
 /** 工具卡片的运行状态图标。 */
 function ToolStatusIcon({ ok, state }: { ok: boolean; state: string }) {
@@ -133,35 +101,70 @@ function ToolStatusIcon({ ok, state }: { ok: boolean; state: string }) {
   );
 }
 
-/** fill_field 工具卡片：字段名、值与 provenance。 */
-function FillFieldCard({
+/** 每批只展示一个摘要，展开后按字段定位核对。 */
+function FillFieldsCard({
   part,
+  onLocateField,
 }: {
-  part: Extract<ToolPart, { type: "tool-fill_field" }>;
+  part: Extract<ToolPart, { type: "tool-fill_fields" }>;
+  onLocateField: (field: AutofillFieldName) => void;
 }) {
-  const input = part.state === "input-streaming" ? undefined : part.input;
-  const ok = part.state === "output-available" && part.output?.ok !== false;
+  const output = part.state === "output-available" ? part.output : undefined;
+  const results = output?.results ?? [];
+  const labels: Record<FillFieldStatus, string> = {
+    filled: "已填入",
+    invalid: "校验失败",
+    protected: "保留人工修改",
+    review: "待核对",
+  };
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-muted/40 px-3 py-2 text-sm">
-      <ToolStatusIcon ok={ok} state={part.state} />
-      {input ? (
-        <>
-          <span className="font-medium">{FIELD_LABELS[input.field]}</span>
-          <span className="min-w-0 flex-1 truncate text-muted-foreground">
-            {formatValue(input.value)}
+    <details className="rounded-xl border bg-muted/40 px-3 py-2 text-sm">
+      <summary className="cursor-pointer">
+        批量回填{output ? ` · ${results.length} 个字段` : "…"}
+        {output ? (
+          <span className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-muted-foreground text-xs">
+            已填入{" "}
+            {
+              results.filter(
+                (item) => item.status === "filled" || item.status === "review"
+              ).length
+            }
+            <span>
+              待核对 {results.filter((item) => item.status === "review").length}
+            </span>
+            <span>
+              保留人工修改{" "}
+              {results.filter((item) => item.status === "protected").length}
+            </span>
+            <span>
+              校验失败{" "}
+              {results.filter((item) => item.status === "invalid").length}
+            </span>
           </span>
-          <span className="text-muted-foreground text-xs">
-            {input.source} · {Math.round(input.confidence * 100)}%
-          </span>
-        </>
-      ) : null}
-      {part.state === "output-error" ? (
-        <span className="text-destructive text-xs">{part.errorText}</span>
-      ) : null}
-      {part.state === "output-available" && part.output?.ok === false ? (
-        <span className="text-destructive text-xs">{part.output.error}</span>
-      ) : null}
-    </div>
+        ) : null}
+      </summary>
+      <div className="mt-2 flex flex-col gap-2">
+        {results
+          .filter(
+            (result, index) =>
+              results.findIndex((item) => item.field === result.field) === index
+          )
+          .map((result) => (
+            <button
+              className="text-left text-xs hover:underline"
+              key={result.field}
+              onClick={() => onLocateField(result.field)}
+              type="button"
+            >
+              {FIELD_LABELS[result.field]} · {labels[result.status]}
+              {result.error ? `：${result.error}` : ""}
+            </button>
+          ))}
+        {part.state === "output-error" ? (
+          <p className="text-destructive text-xs">{part.errorText}</p>
+        ) : null}
+      </div>
+    </details>
   );
 }
 
@@ -258,14 +261,16 @@ function FetchGithubRepoCard({
 
 /** 渲染单个工具调用卡片（抓取网页 / 抓取仓库 / 填充字段）。 */
 function ToolPartView({
+  onLocateField,
   onOpenMaterial,
   part,
 }: {
   onOpenMaterial: (material: MaterialState) => void;
+  onLocateField: (field: AutofillFieldName) => void;
   part: ToolPart;
 }) {
-  if (part.type === "tool-fill_field") {
-    return <FillFieldCard part={part} />;
+  if (part.type === "tool-fill_fields") {
+    return <FillFieldsCard onLocateField={onLocateField} part={part} />;
   }
   if (part.type === "tool-fetch_page") {
     return <FetchPageCard onOpenMaterial={onOpenMaterial} part={part} />;
@@ -278,9 +283,11 @@ function ToolPartView({
 
 /** 渲染一条消息：用户右对齐气泡；助手按 part 顺序渲染文本与工具卡片。 */
 function MessageView({
+  onLocateField,
   message,
   onOpenMaterial,
 }: {
+  onLocateField: (field: AutofillFieldName) => void;
   message: AutofillChatMessage;
   onOpenMaterial: (material: MaterialState) => void;
 }) {
@@ -323,6 +330,7 @@ function MessageView({
       {toolParts.map((part) => (
         <ToolPartView
           key={part.toolCallId}
+          onLocateField={onLocateField}
           onOpenMaterial={onOpenMaterial}
           part={part}
         />
@@ -336,7 +344,14 @@ export function AiAutofillChat({
   onRoundFinish,
 }: AiAutofillChatProps) {
   const [input, setInput] = useState("");
-  const [open, setOpen] = useState(true);
+  const wide = useSyncExternalStore(
+    subscribeWide,
+    getWideSnapshot,
+    getServerWideSnapshot
+  );
+  const [wideOpen, setWideOpen] = useState(true);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const locatedField = useRef<HTMLElement | null>(null);
   const [material, setMaterial] = useState<MaterialState | null>(null);
   /** 滚动容器经 state 挂载：消息更新时自动滚动到底部。 */
   const [scrollEl, setScrollEl] = useState<HTMLDivElement | null>(null);
@@ -368,37 +383,23 @@ export function AiAutofillChat({
         }
       },
       onToolCall: ({ toolCall }) => {
-        if (toolCall.toolName !== "fill_field") {
+        if (toolCall.toolName !== "fill_fields") {
           return;
         }
-        const parsed = fillFieldInputSchema.safeParse(toolCall.input);
+        const parsed = fillFieldsInputSchema.safeParse(toolCall.input);
         if (!parsed.success) {
           addToolOutput({
             errorText: parsed.error.issues[0]?.message ?? "invalid input",
             state: "output-error",
-            tool: "fill_field",
+            tool: "fill_fields",
             toolCallId: toolCall.toolCallId,
           });
           return;
         }
-        const { confidence, field, source } = parsed.data;
-        const coerced = coerceArrayInput(field, parsed.data.value);
-        const check = libraryFormSchema.shape[field].safeParse(coerced);
-        if (!check.success) {
-          addToolOutput({
-            errorText:
-              check.error.issues[0]?.message ??
-              `值不符合字段要求，${field} 需为字符串数组`,
-            state: "output-error",
-            tool: "fill_field",
-            toolCallId: toolCall.toolCallId,
-          });
-          return;
-        }
-        onFieldRef.current(field, check.data, { confidence, source });
+        const output = applyAutofillBatch(parsed.data, onFieldRef.current);
         addToolOutput({
-          output: { ok: true },
-          tool: "fill_field",
+          output,
+          tool: "fill_fields",
           toolCallId: toolCall.toolCallId,
         });
       },
@@ -417,120 +418,181 @@ export function AiAutofillChat({
 
   function handleSend() {
     const text = input.trim();
-    if (text === "" || status !== "ready") {
+    if (text === "" || (status !== "ready" && status !== "error")) {
       return;
     }
     sendMessage({ text });
     setInput("");
   }
 
-  if (!open) {
-    return (
-      <div className="xl:order-2">
-        <Button onClick={() => setOpen(true)} variant="outline">
-          <SparklesIcon />
-          AI 对话填充
+  function handleLocateField(field: AutofillFieldName) {
+    const target = document.getElementById(`ai-field-${field}`);
+    locatedField.current = target;
+    if (!wide) {
+      setDrawerOpen(false);
+    }
+    target?.scrollIntoView({ behavior: "smooth", block: "center" });
+    target?.focus({ preventScroll: true });
+  }
+
+  const panel = (
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="flex items-start justify-between gap-2 border-b px-4 py-3">
+        <div className="flex flex-col gap-0.5">
+          <span className="font-heading font-medium text-base">
+            AI 对话填充
+          </span>
+          <span className="text-muted-foreground text-xs">
+            粘贴官网地址开始研究，也可对话修正已填字段。
+          </span>
+        </div>
+        <Button
+          aria-label="收起对话面板"
+          onClick={() => {
+            setMaterial(null);
+            if (wide) {
+              setWideOpen(false);
+            } else {
+              setDrawerOpen(false);
+            }
+          }}
+          size="icon-sm"
+          type="button"
+          variant="ghost"
+        >
+          <XIcon />
         </Button>
       </div>
-    );
-  }
+      <div
+        className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4"
+        ref={setScrollEl}
+      >
+        {messages.length === 0 ? (
+          <div className="m-auto max-w-64 text-center text-muted-foreground text-sm">
+            <SparklesIcon className="mx-auto mb-2 size-6" />
+            发送组件库官网地址（如 https://magicui.design/）， AI
+            会收集材料后批量填充表单，保留你的手工修改。
+          </div>
+        ) : null}
+        {messages.map((message) => (
+          <MessageView
+            key={message.id}
+            message={message}
+            onLocateField={handleLocateField}
+            onOpenMaterial={setMaterial}
+          />
+        ))}
+        {busy ? (
+          <div className="flex items-center gap-2 text-muted-foreground text-sm">
+            <LoaderCircleIcon className="size-3.5 animate-spin" />
+            {status === "submitted" ? "正在请求…" : "思考中…"}
+          </div>
+        ) : null}
+        {error ? (
+          <p className="text-destructive text-sm">出错了：{error.message}</p>
+        ) : null}
+      </div>
+      <div
+        className={cn(
+          "flex items-end gap-2 border-t p-3",
+          busy && "opacity-80"
+        )}
+      >
+        <Textarea
+          aria-label="发送给 AI 的消息"
+          className="field-sizing-content max-h-32 min-h-9 resize-none"
+          onChange={(event) => setInput(event.target.value)}
+          onKeyDown={(event) => {
+            if (
+              event.key === "Enter" &&
+              !event.shiftKey &&
+              !event.nativeEvent.isComposing
+            ) {
+              event.preventDefault();
+              handleSend();
+            }
+          }}
+          placeholder="粘贴官网地址，或描述要修正的字段"
+          rows={1}
+          value={input}
+        />
+        {busy ? (
+          <Button
+            aria-label="停止生成"
+            onClick={stop}
+            size="icon"
+            type="button"
+            variant="outline"
+          >
+            <SquareIcon />
+          </Button>
+        ) : (
+          <Button
+            aria-label="发送"
+            disabled={
+              input.trim() === "" || (status !== "ready" && status !== "error")
+            }
+            onClick={handleSend}
+            size="icon"
+            type="button"
+          >
+            <SendIcon />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
+  const desktopPanel = wideOpen ? (
+    <aside
+      aria-label="AI 对话填充"
+      className="fixed inset-y-0 right-0 z-30 h-dvh w-(--ai-sidebar-width) border-l bg-card"
+      data-ai-sidebar="open"
+    >
+      {panel}
+    </aside>
+  ) : (
+    <Button
+      className="fixed top-3 right-4 z-30 bg-background"
+      onClick={() => setWideOpen(true)}
+      type="button"
+      variant="outline"
+    >
+      <SparklesIcon />
+      AI 对话填充{busy ? " · 处理中" : ""}
+    </Button>
+  );
 
   return (
     <>
-      <aside className="flex h-[28rem] w-full shrink-0 flex-col overflow-hidden rounded-xl border bg-card shadow-sm xl:sticky xl:top-6 xl:order-2 xl:h-[calc(100svh-9rem)] xl:w-96">
-        <div className="flex items-start justify-between gap-2 border-b px-4 py-3">
-          <div className="flex flex-col gap-0.5">
-            <span className="font-heading font-medium text-base">
-              AI 对话填充
-            </span>
-            <span className="text-muted-foreground text-xs">
-              粘贴官网地址开始研究，也可对话修正已填字段。
-            </span>
-          </div>
-          <Button
-            aria-label="收起对话面板"
+      {wide ? (
+        desktopPanel
+      ) : (
+        <Sheet onOpenChange={setDrawerOpen} open={drawerOpen}>
+          <SheetTrigger
             onClick={() => {
-              setMaterial(null);
-              setOpen(false);
+              locatedField.current = null;
             }}
-            size="icon-sm"
-            variant="ghost"
+            render={
+              <Button className="self-start" type="button" variant="outline" />
+            }
           >
-            <XIcon />
-          </Button>
-        </div>
-        <div
-          className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4"
-          ref={setScrollEl}
-        >
-          {messages.length === 0 ? (
-            <div className="m-auto max-w-64 text-center text-muted-foreground text-sm">
-              <SparklesIcon className="mx-auto mb-2 size-6" />
-              发送组件库官网地址（如 https://magicui.design/）， AI
-              会自动抓取材料并逐字段填充表单。
-            </div>
-          ) : null}
-          {messages.map((message) => (
-            <MessageView
-              key={message.id}
-              message={message}
-              onOpenMaterial={setMaterial}
-            />
-          ))}
-          {busy ? (
-            <div className="flex items-center gap-2 text-muted-foreground text-sm">
-              <LoaderCircleIcon className="size-3.5 animate-spin" />
-              {status === "submitted" ? "正在请求…" : "思考中…"}
-            </div>
-          ) : null}
-          {error ? (
-            <p className="text-destructive text-sm">出错了：{error.message}</p>
-          ) : null}
-        </div>
-        <div
-          className={cn(
-            "flex items-end gap-2 border-t p-3",
-            busy && "opacity-80"
-          )}
-        >
-          <Textarea
-            className="field-sizing-content max-h-32 min-h-9 resize-none"
-            onChange={(event) => setInput(event.target.value)}
-            onKeyDown={(event) => {
-              if (
-                event.key === "Enter" &&
-                !event.shiftKey &&
-                !event.nativeEvent.isComposing
-              ) {
-                event.preventDefault();
-                handleSend();
-              }
-            }}
-            placeholder="粘贴官网地址，或描述要修正的字段"
-            rows={1}
-            value={input}
-          />
-          {busy ? (
-            <Button
-              aria-label="停止生成"
-              onClick={stop}
-              size="icon"
-              variant="outline"
-            >
-              <SquareIcon />
-            </Button>
-          ) : (
-            <Button
-              aria-label="发送"
-              disabled={input.trim() === "" || status !== "ready"}
-              onClick={handleSend}
-              size="icon"
-            >
-              <SendIcon />
-            </Button>
-          )}
-        </div>
-      </aside>
+            <SparklesIcon />
+            AI 对话填充{busy ? " · 处理中" : ""}
+          </SheetTrigger>
+          <SheetContent
+            className="data-[side=right]:w-[min(100%,26rem)] data-[side=right]:sm:max-w-none"
+            finalFocus={() => locatedField.current ?? true}
+            showCloseButton={false}
+          >
+            <SheetTitle className="sr-only">AI 对话填充</SheetTitle>
+            <SheetDescription className="sr-only">
+              发送官网地址，收集材料并批量回填表单。
+            </SheetDescription>
+            {panel}
+          </SheetContent>
+        </Sheet>
+      )}
       <Dialog
         onOpenChange={(isOpen) => {
           if (!isOpen) {
