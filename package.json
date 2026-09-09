@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "autofill": "bun scripts/autofill.ts",
     "build": "next build",
     "check": "ultracite check",
     "db:check": "drizzle-kit check",

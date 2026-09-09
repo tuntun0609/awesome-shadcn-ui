@@ -15,10 +15,10 @@ const ARRAY_FIELDS = new Set<AutofillFieldName>([
 ]);
 
 /** 数组字段接受逗号 / 中文顿号分隔的字符串。 */
-const SEPARATOR_PATTERN = /[,，、]/;
+export const SEPARATOR_PATTERN = /[,，、]/;
 
 /** 值为字符串但字段要求数组时的宽容转换：JSON 数组文本或分隔符字符串。 */
-function coerceArrayInput(field: AutofillFieldName, value: unknown) {
+export function coerceArrayInput(field: AutofillFieldName, value: unknown) {
   if (
     !ARRAY_FIELDS.has(field) ||
     Array.isArray(value) ||

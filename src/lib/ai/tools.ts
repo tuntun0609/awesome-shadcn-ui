@@ -53,7 +53,7 @@ function htmlToText(html: string): string {
 }
 
 /** 经 Jina Reader 抓取任意网页为 markdown；Reader 不可达时降级直连抓 HTML。 */
-const fetchPageTool = tool({
+export const fetchPageTool = tool({
   description:
     "Fetch a web page and return its content as clean markdown (rendered JS included). Use for the library website and any subpage such as /pricing or /docs. If the markdown reader proxy is unreachable, falls back to fetching the raw HTML directly; in that case markdown is plain text extracted from the HTML with links kept as 'text (url)' and fallback is true.",
   execute: async ({ url }) => {
@@ -163,7 +163,7 @@ async function searchGithubRepo(repo: string): Promise<string | null> {
 }
 
 /** 一次拿全 GitHub 仓库的元数据与 README；404 时自动搜索纠正仓库名。 */
-const fetchGithubRepoTool = tool({
+export const fetchGithubRepoTool = tool({
   description:
     "Fetch a GitHub repository's metadata (description, license, topics, homepage) and its README content. Provide the owner and repo name; if the exact owner is unknown, give your best guess — on 404 the tool searches GitHub for the repo name, retries with the best match, and reports the resolved full name as resolvedRepo.",
   execute: async ({ owner, repo }) => {
