@@ -3,6 +3,8 @@ import { PlusIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LibraryTable } from "@/components/admin/library-table";
+import { SyncGithubMetricsButton } from "@/components/admin/sync-github-metrics-button";
+import { SyncLibraryLogosButton } from "@/components/admin/sync-library-logos-button";
 import { Button } from "@/components/ui/button";
 import { getDatabase } from "@/db/client";
 import { githubMetrics, libraries } from "@/db/schema";
@@ -20,6 +22,7 @@ export interface LibraryListRow {
   featuredRank: number | null;
   github: string | null;
   id: number;
+  logo: string | null;
   name: string;
   pricing: string;
   slug: string;
@@ -39,6 +42,7 @@ export default async function AdminLibrariesPage() {
       featuredRank: libraries.featuredRank,
       github: libraries.github,
       id: libraries.id,
+      logo: libraries.logo,
       name: libraries.name,
       pricing: libraries.pricing,
       slug: libraries.slug,
@@ -62,13 +66,21 @@ export default async function AdminLibrariesPage() {
             共 {rows.length} 条记录
           </p>
         </div>
-        <Button
-          nativeButton={false}
-          render={<Link href="/admin/libraries/new" />}
-        >
-          <PlusIcon />
-          新建组件库
-        </Button>
+        <div className="flex items-center gap-2">
+          <SyncLibraryLogosButton
+            total={rows.filter((row) => !row.logo).length}
+          />
+          <SyncGithubMetricsButton
+            total={rows.filter((row) => row.github).length}
+          />
+          <Button
+            nativeButton={false}
+            render={<Link href="/admin/libraries/new" />}
+          >
+            <PlusIcon />
+            新建组件库
+          </Button>
+        </div>
       </div>
       <LibraryTable data={rows} />
     </div>

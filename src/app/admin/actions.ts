@@ -1,6 +1,6 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
 import { type Database, getDatabase } from "@/db/client";
@@ -292,6 +292,83 @@ export async function fetchLibraryLogoAction(
   }
 }
 
+export interface LibraryLogoSyncState {
+  failures?: string[];
+  message?: string;
+  succeeded?: number;
+  total?: number;
+}
+
+/** 一键为没有 Logo 的组件库自动采集 Logo（官网 → GitHub 仓库），上传 R2 后回填数据库；失败的项目保持原状。 */
+export async function syncAllLibraryLogosAction(): Promise<LibraryLogoSyncState> {
+  await requireAdmin();
+
+  const db = await getDatabase();
+  const targets = await db
+    .select({
+      github: libraries.github,
+      id: libraries.id,
+      name: libraries.name,
+      slug: libraries.slug,
+      website: libraries.website,
+    })
+    .from(libraries)
+    .where(isNull(libraries.logo));
+
+  const failures: string[] = [];
+  const updates: { id: number; key: string }[] = [];
+
+  await Promise.all(
+    targets.map(async (target) => {
+      try {
+        const resolution = await resolveIcon(
+          { github: target.github ?? undefined, website: target.website },
+          fetch,
+          LOGO_UPLOAD_ACCEPTANCE
+        );
+        if (!resolution.ok) {
+          failures.push(`${target.name}: ${resolution.failures.join("；")}`);
+          return;
+        }
+        const key = await uploadLibraryLogo(
+          target.slug,
+          resolution.asset.bytes
+        );
+        updates.push({ id: target.id, key });
+      } catch (error) {
+        failures.push(
+          `${target.name}: ${error instanceof Error ? error.message : "unknown error"}`
+        );
+      }
+    })
+  );
+
+  if (updates.length > 0) {
+    const updatedAt = new Date().toISOString().replace("T", " ").slice(0, 19);
+    try {
+      await Promise.all(
+        updates.map((update) =>
+          db
+            .update(libraries)
+            .set({ logo: update.key, updatedAt })
+            .where(eq(libraries.id, update.id))
+        )
+      );
+      refreshAdminData();
+    } catch (error) {
+      return (
+        translateConstraintError(error) ?? { message: "保存失败，请稍后重试" }
+      );
+    }
+  }
+
+  return {
+    failures,
+    succeeded: updates.length,
+    total: targets.length,
+  };
+}
+
 export interface GithubMetricsFetchState {
   latestCommitAt?: string | null;
   message?: string;
@@ -320,6 +397,76 @@ export async function fetchGithubMetricsAction(
       message: `GitHub 指标采集失败：${error instanceof Error ? error.message : "未知错误"}`,
     };
   }
+}
+
+export interface GithubMetricsSyncState {
+  failures?: string[];
+  message?: string;
+  succeeded?: number;
+  total?: number;
+}
+
+/** 一键采集所有已关联 GitHub 仓库的指标并批量 upsert 入库；采集失败的仓库保留原有数据。 */
+export async function syncAllGithubMetricsAction(): Promise<GithubMetricsSyncState> {
+  await requireAdmin();
+
+  const db = await getDatabase();
+  const targets = await db
+    .select({
+      github: libraries.github,
+      id: libraries.id,
+      name: libraries.name,
+    })
+    .from(libraries)
+    .where(isNotNull(libraries.github));
+
+  const failures: string[] = [];
+  const metrics: {
+    latestCommitAt: string | null;
+    libraryId: number;
+    stars: number;
+    syncedAt: string;
+  }[] = [];
+
+  await Promise.all(
+    targets.map(async (target) => {
+      try {
+        const metric = await fetchGithubMetrics(target.github as string);
+        metrics.push({ libraryId: target.id, ...metric });
+      } catch (error) {
+        failures.push(
+          `${target.name}: ${error instanceof Error ? error.message : "unknown error"}`
+        );
+      }
+    })
+  );
+
+  if (metrics.length > 0) {
+    try {
+      await db
+        .insert(githubMetrics)
+        .values(metrics)
+        .onConflictDoUpdate({
+          set: {
+            latestCommitAt: sql`excluded.latest_commit_at`,
+            stars: sql`excluded.stars`,
+            syncedAt: sql`excluded.synced_at`,
+          },
+          target: githubMetrics.libraryId,
+        });
+      refreshAdminData();
+    } catch (error) {
+      return (
+        translateConstraintError(error) ?? { message: "保存失败，请稍后重试" }
+      );
+    }
+  }
+
+  return {
+    failures,
+    succeeded: metrics.length,
+    total: targets.length,
+  };
 }
 
 const githubMetricsSaveInputSchema = z.object({
