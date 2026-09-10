@@ -12,9 +12,13 @@ import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { getCatalogEntry } from "@/db/catalog-data";
+import { getCatalog, getCatalogEntry } from "@/db/catalog-data";
 import { Link } from "@/i18n/navigation";
-import { formatCommitDate, formatCompactNumber } from "@/lib/catalog";
+import {
+  formatCommitDate,
+  formatCompactNumber,
+  relatedLibraries,
+} from "@/lib/catalog";
 import { logoPublicUrl } from "@/lib/logo-url";
 import { withRefParam } from "@/lib/utils";
 
@@ -54,6 +58,8 @@ export default async function LibraryPage({
   const { library, metric } = entry;
   const host = (await headers()).get("host") ?? "";
   const logoSrc = library.logo ? logoPublicUrl(library.logo) : undefined;
+  const catalog = await getCatalog();
+  const related = relatedLibraries(library, catalog.libraries, catalog.metrics);
 
   const [t, tagsT, metricsT, locale] = await Promise.all([
     getTranslations("libraryDetail"),
@@ -186,6 +192,57 @@ export default async function LibraryPage({
               </a>
             ) : null}
           </div>
+          {related.length ? (
+            <section className="mt-14 border-t pt-8">
+              <h2 className="font-medium text-sm">{t("related")}</h2>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {related.map((item) => {
+                  const relatedLogoSrc = item.logo
+                    ? logoPublicUrl(item.logo)
+                    : undefined;
+                  const relatedMetric = catalog.metrics.repositories[item.slug];
+                  return (
+                    <Link
+                      className="group flex gap-3 rounded-xl border p-4 transition-colors hover:bg-muted/35"
+                      href={`/libraries/${item.slug}`}
+                      key={item.slug}
+                    >
+                      <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-card font-semibold text-xs shadow-sm">
+                        {relatedLogoSrc ? (
+                          <Image
+                            alt=""
+                            className="size-5 object-contain"
+                            height={20}
+                            src={relatedLogoSrc}
+                            unoptimized
+                            width={20}
+                          />
+                        ) : (
+                          item.name.slice(0, 2).toUpperCase()
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm underline-offset-4 group-hover:underline">
+                            {item.name}
+                          </span>
+                          {relatedMetric ? (
+                            <span className="inline-flex items-center gap-1 font-mono text-[11px] text-muted-foreground">
+                              <Star aria-hidden="true" className="size-3" />
+                              {formatCompactNumber(relatedMetric.stars, locale)}
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="mt-1 line-clamp-2 text-muted-foreground text-xs leading-5">
+                          {item.description}
+                        </p>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
         </article>
         <SiteFooter />
       </div>

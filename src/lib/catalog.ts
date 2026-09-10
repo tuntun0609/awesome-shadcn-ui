@@ -77,6 +77,44 @@ export function sortLibraries(
   });
 }
 
+/**
+ * 计算与当前组件库最相似的其他组件库。
+ * 相似度由交付类型、使用场景与标签的重叠数量加权得出，
+ * 同分时优先展示星标更多、名称更靠前的库。
+ */
+export function relatedLibraries(
+  current: Library,
+  items: readonly Library[],
+  metrics: GithubSnapshot,
+  limit = 4
+): Library[] {
+  const overlap = (left: readonly string[], right: readonly string[]) =>
+    left.filter((value) => right.includes(value)).length;
+
+  return items
+    .filter((item) => item.slug !== current.slug)
+    .map((item) => ({
+      item,
+      score:
+        overlap(item.useCases, current.useCases) * 2 +
+        overlap(item.delivery, current.delivery) +
+        overlap(item.tags, current.tags),
+    }))
+    .filter(({ score }) => score > 0)
+    .sort((left, right) => {
+      if (left.score !== right.score) {
+        return right.score - left.score;
+      }
+      const leftStars = metrics.repositories[left.item.slug]?.stars ?? -1;
+      const rightStars = metrics.repositories[right.item.slug]?.stars ?? -1;
+      return (
+        rightStars - leftStars || left.item.name.localeCompare(right.item.name)
+      );
+    })
+    .slice(0, limit)
+    .map(({ item }) => item);
+}
+
 export function formatCompactNumber(value: number, locale: string) {
   return new Intl.NumberFormat(locale, {
     maximumFractionDigits: 1,

@@ -13,7 +13,7 @@ import {
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import {
   Select,
   SelectContent,
@@ -55,6 +55,20 @@ const sortValues: readonly CatalogSort[] = [
 
 const readList = (params: URLSearchParams, key: string) =>
   params.get(key)?.split(",").filter(Boolean) ?? [];
+
+const isEditableTarget = (target: EventTarget | null) => {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+  return (
+    target.isContentEditable ||
+    ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)
+  );
+};
+
+const MAC_USER_AGENT = /Mac|iP(hone|od|ad)/;
+const isMacPlatform = () =>
+  typeof navigator !== "undefined" && MAC_USER_AGENT.test(navigator.userAgent);
 
 function Initials({ name }: { name: string }) {
   return (
@@ -174,9 +188,29 @@ export function LibraryDirectory({
   const searchParams = useSearchParams();
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [host, setHost] = useState("");
+  const [shortcutLabel, setShortcutLabel] = useState("/");
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setHost(window.location.host);
+    setShortcutLabel(isMacPlatform() ? "⌘K" : "Ctrl K");
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "/" && !isEditableTarget(event.target)) {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
   const filters: CatalogFilters = {
@@ -265,12 +299,16 @@ export function LibraryDirectory({
               className="absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary"
             />
             <input
-              className="h-11 w-full rounded-lg border bg-background pr-4 pl-11 text-sm outline-none transition-[border-color,box-shadow] placeholder:text-muted-foreground/70 focus:border-primary focus:ring-4 focus:ring-primary/10"
+              className="h-11 w-full rounded-lg border bg-background pr-16 pl-11 text-sm outline-none transition-[border-color,box-shadow] placeholder:text-muted-foreground/70 focus:border-primary focus:ring-4 focus:ring-primary/10 group-focus-within:kbd:hidden"
               onChange={(event) => setParam("q", event.target.value)}
               placeholder={t("searchPlaceholder")}
+              ref={searchInputRef}
               type="search"
               value={filters.query}
             />
+            <kbd className="pointer-events-none absolute top-1/2 right-4 hidden -translate-y-1/2 rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground sm:inline-block">
+              {shortcutLabel}
+            </kbd>
           </label>
 
           <Select
@@ -316,6 +354,12 @@ export function LibraryDirectory({
             </button>
           ) : null}
         </div>
+      </div>
+
+      <div className="flex items-center justify-between pb-2">
+        <p className="font-mono text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
+          {t("resultCount", { count: visibleLibraries.length })}
+        </p>
       </div>
 
       <div>
@@ -410,7 +454,11 @@ export function LibraryDirectory({
 
       {visibleLibraries.length === 0 ? (
         <div className="border-border border-b py-20 text-center">
-          <p className="font-medium">{t("noMatch")}</p>
+          <p className="font-medium">
+            {filters.query.trim()
+              ? t("noMatchQuery", { query: filters.query.trim() })
+              : t("noMatch")}
+          </p>
           <button
             className="mt-3 text-primary text-sm underline underline-offset-4"
             onClick={clearFilters}
