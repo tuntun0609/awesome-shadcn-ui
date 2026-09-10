@@ -6,6 +6,7 @@
   },
   "header": {
     "about": "About",
+    "favorites": "View your favorites",
     "github": "View the project on GitHub",
     "navLabel": "Primary navigation",
     "signIn": "Sign in",
@@ -51,6 +52,23 @@
     },
     "sortLabel": "Sort libraries",
     "visit": "Visit {name}"
+  },
+  "favorites": {
+    "add": "Save",
+    "added": "Added to favorites",
+    "browseDirectory": "Browse the directory",
+    "empty": "No favorites yet.",
+    "emptyHint": "Browse the directory and tap the heart to save libraries here.",
+    "error": "Something went wrong. Please try again.",
+    "eyebrow": "Your collection",
+    "favoriteAction": "Save {name} to favorites",
+    "metadataDescription": "Your saved shadcn-compatible UI libraries.",
+    "metadataTitle": "Favorites",
+    "remove": "Saved",
+    "removed": "Removed from favorites",
+    "subtitle": "Everything you've hearted, in one place. Removing a favorite updates instantly.",
+    "title": "Libraries you've saved.",
+    "unfavoriteAction": "Remove {name} from favorites"
   },
   "filterGroups": {
     "access": "Access",

@@ -6,6 +6,7 @@
   },
   "header": {
     "about": "关于",
+    "favorites": "查看我的收藏",
     "github": "在 GitHub 上查看该项目",
     "navLabel": "主导航",
     "signIn": "登录",
@@ -51,6 +52,23 @@
     },
     "sortLabel": "排序方式",
     "visit": "访问 {name}"
+  },
+  "favorites": {
+    "add": "收藏",
+    "added": "已加入收藏",
+    "browseDirectory": "浏览目录",
+    "empty": "还没有收藏任何组件库。",
+    "emptyHint": "去目录逛逛,点击心形即可收藏组件库。",
+    "error": "操作失败,请重试。",
+    "eyebrow": "你的收藏",
+    "favoriteAction": "收藏 {name}",
+    "metadataDescription": "你收藏的 shadcn 兼容 UI 组件库。",
+    "metadataTitle": "收藏",
+    "remove": "已收藏",
+    "removed": "已取消收藏",
+    "subtitle": "心形标记的组件库都在这里,取消收藏会即时更新。",
+    "title": "你保存的组件库。",
+    "unfavoriteAction": "取消收藏 {name}"
   },
   "filterGroups": {
     "access": "获取方式",

@@ -8,6 +8,13 @@
       "when": 1788330327008,
       "tag": "0000_clumsy_bruce_banner",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1789000802242,
+      "tag": "0001_large_banshee",
+      "breakpoints": true
     }
   ]
 }

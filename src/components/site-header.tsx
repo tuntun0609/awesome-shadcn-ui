@@ -1,4 +1,5 @@
 import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import { Heart } from "lucide-react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { LocaleToggle } from "@/components/locale-toggle";
@@ -48,6 +49,15 @@ export function SiteHeader() {
           </svg>
           <span className="sr-only">{t("github")}</span>
         </a>
+        <Show when="signed-in">
+          <Link
+            className="nav-link hidden px-2 sm:inline-flex"
+            href="/favorites"
+          >
+            <Heart aria-hidden="true" className="size-4" />
+            <span className="sr-only">{t("favorites")}</span>
+          </Link>
+        </Show>
         <LocaleToggle />
         <ThemeToggle />
         <Show when="signed-out">

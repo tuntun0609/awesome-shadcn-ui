@@ -1,7 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
-import { Suspense } from "react";
 import { LibraryDirectory } from "@/components/library-directory";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -10,21 +9,36 @@ import { getFavoriteSlugs } from "@/db/favorites-repository";
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]/favorites">): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "favorites" });
+
   return {
     alternates: {
-      languages: { en: "/", "x-default": "/", zh: "/zh" },
+      languages: {
+        en: "/favorites",
+        "x-default": "/favorites",
+        zh: "/zh/favorites",
+      },
     },
+    description: t("metadataDescription"),
+    title: t("metadataTitle"),
   };
 }
 
-export default async function Home() {
-  const [{ userId }, t, { libraries, metrics }] = await Promise.all([
-    auth(),
-    getTranslations("home"),
+export default async function FavoritesPage() {
+  const { redirectToSignIn, userId } = await auth();
+  if (!userId) {
+    return redirectToSignIn();
+  }
+
+  const [t, { libraries, metrics }, favoriteSlugs] = await Promise.all([
+    getTranslations("favorites"),
     getCatalog(),
+    getFavoriteSlugs(userId),
   ]);
-  const favoriteSlugs = userId ? await getFavoriteSlugs(userId) : [];
 
   return (
     <main>
@@ -43,14 +57,13 @@ export default async function Home() {
             {t("subtitle")}
           </p>
         </section>
-        <Suspense fallback={<div className="min-h-[460px] border-t" />}>
-          <LibraryDirectory
-            initialFavorites={favoriteSlugs}
-            libraries={libraries}
-            metrics={metrics}
-            signedIn={Boolean(userId)}
-          />
-        </Suspense>
+        <LibraryDirectory
+          favoritesOnly
+          initialFavorites={favoriteSlugs}
+          libraries={libraries}
+          metrics={metrics}
+          signedIn
+        />
         <SiteFooter />
       </div>
     </main>

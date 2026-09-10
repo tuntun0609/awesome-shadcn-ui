@@ -1,3 +1,4 @@
+import { auth } from "@clerk/nextjs/server";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -10,9 +11,11 @@ import { headers } from "next/headers";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
+import { FavoriteButton } from "@/components/favorite-button";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { getCatalog, getCatalogEntry } from "@/db/catalog-data";
+import { isFavorite } from "@/db/favorites-repository";
 import { Link } from "@/i18n/navigation";
 import {
   formatCommitDate,
@@ -60,6 +63,8 @@ export default async function LibraryPage({
   const logoSrc = library.logo ? logoPublicUrl(library.logo) : undefined;
   const catalog = await getCatalog();
   const related = relatedLibraries(library, catalog.libraries, catalog.metrics);
+  const { userId } = await auth();
+  const favorited = userId ? await isFavorite(userId, slug) : false;
 
   const [t, tagsT, metricsT, locale] = await Promise.all([
     getTranslations("libraryDetail"),
@@ -171,6 +176,13 @@ export default async function LibraryPage({
             </section>
           ) : null}
           <div className="mt-12 flex flex-wrap gap-3 border-t pt-8">
+            <FavoriteButton
+              initialFavorited={favorited}
+              name={library.name}
+              signedIn={Boolean(userId)}
+              slug={library.slug}
+              variant="labeled"
+            />
             <a
               className="inline-flex h-11 items-center gap-2 rounded-lg bg-foreground px-4 font-medium text-background text-sm"
               href={withRefParam(library.website, host)}

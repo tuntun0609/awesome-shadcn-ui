@@ -14,6 +14,7 @@ import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { FavoriteButton } from "@/components/favorite-button";
 import {
   Select,
   SelectContent,
@@ -43,8 +44,14 @@ import { logoPublicUrl } from "@/lib/logo-url";
 import { cn, withRefParam } from "@/lib/utils";
 
 interface LibraryDirectoryProps {
+  /** 开启后仅展示收藏的组件库，取消收藏会立即从列表移除。 */
+  favoritesOnly?: boolean;
+  /** 初始已收藏的组件库 slug 列表（登录用户）。 */
+  initialFavorites?: string[];
   libraries: Library[];
   metrics: GithubSnapshot;
+  /** 当前用户是否已登录；未登录时点击收藏会引导登录。 */
+  signedIn?: boolean;
 }
 
 const sortValues: readonly CatalogSort[] = [
@@ -177,16 +184,23 @@ function Metric({ children }: { children: ReactNode }) {
 }
 
 export function LibraryDirectory({
+  favoritesOnly = false,
+  initialFavorites = [],
   libraries,
   metrics,
+  signedIn = false,
 }: LibraryDirectoryProps) {
   const t = useTranslations("directory");
+  const favoritesT = useTranslations("favorites");
   const tagsT = useTranslations("tags");
   const metricsT = useTranslations("metrics");
   const locale = useLocale();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [favorites, setFavorites] = useState<ReadonlySet<string>>(
+    () => new Set(initialFavorites)
+  );
   const [host, setHost] = useState("");
   const [shortcutLabel, setShortcutLabel] = useState("/");
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -227,8 +241,24 @@ export function LibraryDirectory({
       ? requestedSort
       : "featured";
 
+  const handleFavoriteChange = (slug: string, favorited: boolean) => {
+    setFavorites((previous) => {
+      const next = new Set(previous);
+      if (favorited) {
+        next.add(slug);
+      } else {
+        next.delete(slug);
+      }
+      return next;
+    });
+  };
+
+  const favoriteLibraries = favoritesOnly
+    ? libraries.filter((library) => favorites.has(library.slug))
+    : libraries;
+
   const visibleLibraries = sortLibraries(
-    filterLibraries(libraries, filters),
+    filterLibraries(favoriteLibraries, filters),
     sort,
     metrics
   );
@@ -278,6 +308,43 @@ export function LibraryDirectory({
     label: t(`sort.${value}`),
     value,
   }));
+
+  let emptyState: ReactNode = null;
+  if (visibleLibraries.length === 0) {
+    if (favoritesOnly && favorites.size === 0) {
+      emptyState = (
+        <div className="border-border border-b py-20 text-center">
+          <p className="font-medium">{favoritesT("empty")}</p>
+          <p className="mt-2 text-muted-foreground text-sm">
+            {favoritesT("emptyHint")}
+          </p>
+          <Link
+            className="mt-4 inline-flex h-11 items-center rounded-lg bg-foreground px-4 font-medium text-background text-sm"
+            href="/"
+          >
+            {favoritesT("browseDirectory")}
+          </Link>
+        </div>
+      );
+    } else {
+      emptyState = (
+        <div className="border-border border-b py-20 text-center">
+          <p className="font-medium">
+            {filters.query.trim()
+              ? t("noMatchQuery", { query: filters.query.trim() })
+              : t("noMatch")}
+          </p>
+          <button
+            className="mt-3 text-primary text-sm underline underline-offset-4"
+            onClick={clearFilters}
+            type="button"
+          >
+            {t("clearAllFilters")}
+          </button>
+        </div>
+      );
+    }
+  }
 
   return (
     <section aria-labelledby="directory-title" className="pb-24">
@@ -438,36 +505,32 @@ export function LibraryDirectory({
                 </div>
               </div>
 
-              <a
-                aria-label={t("visit", { name: library.name })}
-                className="inline-flex size-9 items-center justify-center rounded-lg border text-muted-foreground transition-[color,border-color] hover:border-primary/50 hover:text-primary sm:justify-self-end"
-                href={withRefParam(library.website, host)}
-                rel="noreferrer"
-                target="_blank"
-              >
-                <ArrowUpRight aria-hidden="true" className="size-4" />
-              </a>
+              <div className="flex items-center gap-2 sm:justify-self-end">
+                <FavoriteButton
+                  initialFavorited={favorites.has(library.slug)}
+                  name={library.name}
+                  onChange={(favorited) =>
+                    handleFavoriteChange(library.slug, favorited)
+                  }
+                  signedIn={signedIn}
+                  slug={library.slug}
+                />
+                <a
+                  aria-label={t("visit", { name: library.name })}
+                  className="inline-flex size-9 items-center justify-center rounded-lg border text-muted-foreground transition-[color,border-color] hover:border-primary/50 hover:text-primary"
+                  href={withRefParam(library.website, host)}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  <ArrowUpRight aria-hidden="true" className="size-4" />
+                </a>
+              </div>
             </article>
           );
         })}
       </div>
 
-      {visibleLibraries.length === 0 ? (
-        <div className="border-border border-b py-20 text-center">
-          <p className="font-medium">
-            {filters.query.trim()
-              ? t("noMatchQuery", { query: filters.query.trim() })
-              : t("noMatch")}
-          </p>
-          <button
-            className="mt-3 text-primary text-sm underline underline-offset-4"
-            onClick={clearFilters}
-            type="button"
-          >
-            {t("clearAllFilters")}
-          </button>
-        </div>
-      ) : null}
+      {emptyState}
 
       {mobileFiltersOpen ? (
         <div

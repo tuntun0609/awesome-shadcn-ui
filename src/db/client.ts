@@ -4,6 +4,7 @@ import {
   githubMetrics,
   libraries,
   libraryDeliveries,
+  libraryFavorites,
   libraryTags,
   libraryUseCases,
 } from "@/db/schema";
@@ -13,6 +14,7 @@ const databaseSchema = {
   githubMetrics,
   libraries,
   libraryDeliveries,
+  libraryFavorites,
   libraryTags,
   libraryUseCases,
 };

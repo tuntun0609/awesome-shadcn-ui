@@ -155,6 +155,28 @@ export const libraryTags = sqliteTable(
   ]
 );
 
+export const libraryFavorites = sqliteTable(
+  "library_favorites",
+  {
+    /** 收藏时间。 */
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    /** 被收藏组件库的主键。 */
+    libraryId: integer("library_id")
+      .notNull()
+      .references(() => libraries.id, { onDelete: "cascade" }),
+    /** Clerk 用户 ID。 */
+    userId: text("user_id").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.libraryId] }),
+    index("library_favorites_library_id_idx").on(table.libraryId),
+    check(
+      "library_favorites_user_id_check",
+      sql`length(trim(${table.userId})) > 0`
+    ),
+  ]
+);
+
 export const githubMetrics = sqliteTable(
   "github_metrics",
   {
