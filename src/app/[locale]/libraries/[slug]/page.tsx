@@ -12,10 +12,12 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { FavoriteButton } from "@/components/favorite-button";
+import { LikeButton } from "@/components/like-button";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { getCatalog, getCatalogEntry } from "@/db/catalog-data";
 import { isFavorite } from "@/db/favorites-repository";
+import { getLikeCounts, getLikedSlugs } from "@/db/likes-repository";
 import { Link } from "@/i18n/navigation";
 import {
   formatCommitDate,
@@ -24,6 +26,7 @@ import {
 } from "@/lib/catalog";
 import { logoPublicUrl } from "@/lib/logo-url";
 import { withRefParam } from "@/lib/utils";
+import { readVisitorId } from "@/lib/visitor-id";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +68,11 @@ export default async function LibraryPage({
   const related = relatedLibraries(library, catalog.libraries, catalog.metrics);
   const { userId } = await auth();
   const favorited = userId ? await isFavorite(userId, slug) : false;
+  const visitorId = await readVisitorId();
+  const [likeCounts, likedSlugs] = await Promise.all([
+    getLikeCounts(),
+    visitorId ? getLikedSlugs(visitorId) : Promise.resolve<string[]>([]),
+  ]);
 
   const [t, tagsT, metricsT, locale] = await Promise.all([
     getTranslations("libraryDetail"),
@@ -176,6 +184,13 @@ export default async function LibraryPage({
             </section>
           ) : null}
           <div className="mt-12 flex flex-wrap gap-3 border-t pt-8">
+            <LikeButton
+              initialCount={likeCounts[slug] ?? 0}
+              initialLiked={likedSlugs.includes(slug)}
+              name={library.name}
+              slug={slug}
+              variant="labeled"
+            />
             <FavoriteButton
               initialFavorited={favorited}
               name={library.name}

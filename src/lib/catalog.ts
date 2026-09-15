@@ -2,7 +2,11 @@ import type { GithubSnapshot, Library } from "@/lib/catalog-model";
 
 export type { GithubMetric, GithubSnapshot } from "@/lib/catalog-model";
 
-export type CatalogSort = "featured" | "recently-updated" | "most-starred";
+export type CatalogSort =
+  | "featured"
+  | "recently-updated"
+  | "most-starred"
+  | "most-liked";
 
 export interface CatalogFilters {
   access: string[];
@@ -47,9 +51,16 @@ export function filterLibraries(
 export function sortLibraries(
   items: readonly Library[],
   sort: CatalogSort,
-  metrics: GithubSnapshot
+  metrics: GithubSnapshot,
+  likeCounts: Record<string, number> = {}
 ) {
   return [...items].sort((left, right) => {
+    if (sort === "most-liked") {
+      const delta =
+        (likeCounts[right.slug] ?? 0) - (likeCounts[left.slug] ?? 0);
+      return delta || left.name.localeCompare(right.name);
+    }
+
     if (sort === "most-starred") {
       const delta =
         (metrics.repositories[right.slug]?.stars ?? -1) -

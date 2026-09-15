@@ -177,6 +177,28 @@ export const libraryFavorites = sqliteTable(
   ]
 );
 
+export const libraryLikes = sqliteTable(
+  "library_likes",
+  {
+    /** 点赞时间。 */
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    /** 被点赞组件库的主键。 */
+    libraryId: integer("library_id")
+      .notNull()
+      .references(() => libraries.id, { onDelete: "cascade" }),
+    /** 匿名访客 ID，来自长期 cookie。 */
+    visitorId: text("visitor_id").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.visitorId, table.libraryId] }),
+    index("library_likes_library_id_idx").on(table.libraryId),
+    check(
+      "library_likes_visitor_id_check",
+      sql`length(trim(${table.visitorId})) > 0`
+    ),
+  ]
+);
+
 export const githubMetrics = sqliteTable(
   "github_metrics",
   {

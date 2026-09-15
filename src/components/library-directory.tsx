@@ -15,6 +15,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { FavoriteButton } from "@/components/favorite-button";
+import { LikeButton } from "@/components/like-button";
 import {
   Select,
   SelectContent,
@@ -48,7 +49,11 @@ interface LibraryDirectoryProps {
   favoritesOnly?: boolean;
   /** 初始已收藏的组件库 slug 列表（登录用户）。 */
   initialFavorites?: string[];
+  /** 初始已点赞的组件库 slug 列表（匿名访客）。 */
+  initialLiked?: string[];
   libraries: Library[];
+  /** 各组件库的初始点赞数，以 slug 为键。 */
+  likeCounts?: Record<string, number>;
   metrics: GithubSnapshot;
   /** 当前用户是否已登录；未登录时点击收藏会引导登录。 */
   signedIn?: boolean;
@@ -58,6 +63,7 @@ const sortValues: readonly CatalogSort[] = [
   "featured",
   "recently-updated",
   "most-starred",
+  "most-liked",
 ];
 
 const readList = (params: URLSearchParams, key: string) =>
@@ -186,6 +192,8 @@ function Metric({ children }: { children: ReactNode }) {
 export function LibraryDirectory({
   favoritesOnly = false,
   initialFavorites = [],
+  initialLiked = [],
+  likeCounts = {},
   libraries,
   metrics,
   signedIn = false,
@@ -201,6 +209,12 @@ export function LibraryDirectory({
   const [favorites, setFavorites] = useState<ReadonlySet<string>>(
     () => new Set(initialFavorites)
   );
+  const [liked, setLiked] = useState<ReadonlySet<string>>(
+    () => new Set(initialLiked)
+  );
+  const [counts, setCounts] = useState<Record<string, number>>(() => ({
+    ...likeCounts,
+  }));
   const [host, setHost] = useState("");
   const [shortcutLabel, setShortcutLabel] = useState("/");
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -237,7 +251,9 @@ export function LibraryDirectory({
   };
   const requestedSort = searchParams.get("sort");
   const sort: CatalogSort =
-    requestedSort === "recently-updated" || requestedSort === "most-starred"
+    requestedSort === "recently-updated" ||
+    requestedSort === "most-starred" ||
+    requestedSort === "most-liked"
       ? requestedSort
       : "featured";
 
@@ -253,6 +269,19 @@ export function LibraryDirectory({
     });
   };
 
+  const handleLikeChange = (slug: string, isLiked: boolean, count: number) => {
+    setLiked((previous) => {
+      const next = new Set(previous);
+      if (isLiked) {
+        next.add(slug);
+      } else {
+        next.delete(slug);
+      }
+      return next;
+    });
+    setCounts((previous) => ({ ...previous, [slug]: count }));
+  };
+
   const favoriteLibraries = favoritesOnly
     ? libraries.filter((library) => favorites.has(library.slug))
     : libraries;
@@ -260,7 +289,8 @@ export function LibraryDirectory({
   const visibleLibraries = sortLibraries(
     filterLibraries(favoriteLibraries, filters),
     sort,
-    metrics
+    metrics,
+    counts
   );
   const selectedCount =
     filters.source.length +
@@ -506,6 +536,15 @@ export function LibraryDirectory({
               </div>
 
               <div className="flex items-center gap-2 sm:justify-self-end">
+                <LikeButton
+                  initialCount={counts[library.slug] ?? 0}
+                  initialLiked={liked.has(library.slug)}
+                  name={library.name}
+                  onChange={(isLiked, count) =>
+                    handleLikeChange(library.slug, isLiked, count)
+                  }
+                  slug={library.slug}
+                />
                 <FavoriteButton
                   initialFavorited={favorites.has(library.slug)}
                   name={library.name}

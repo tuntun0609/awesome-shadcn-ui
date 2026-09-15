@@ -5,6 +5,7 @@ import {
   libraries,
   libraryDeliveries,
   libraryFavorites,
+  libraryLikes,
   libraryTags,
   libraryUseCases,
 } from "@/db/schema";
@@ -15,6 +16,7 @@ const databaseSchema = {
   libraries,
   libraryDeliveries,
   libraryFavorites,
+  libraryLikes,
   libraryTags,
   libraryUseCases,
 };

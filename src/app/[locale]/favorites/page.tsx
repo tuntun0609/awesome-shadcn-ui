@@ -6,6 +6,8 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { getCatalog } from "@/db/catalog-data";
 import { getFavoriteSlugs } from "@/db/favorites-repository";
+import { getLikeCounts, getLikedSlugs } from "@/db/likes-repository";
+import { readVisitorId } from "@/lib/visitor-id";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +41,11 @@ export default async function FavoritesPage() {
     getCatalog(),
     getFavoriteSlugs(userId),
   ]);
+  const visitorId = await readVisitorId();
+  const [likeCounts, likedSlugs] = await Promise.all([
+    getLikeCounts(),
+    visitorId ? getLikedSlugs(visitorId) : Promise.resolve<string[]>([]),
+  ]);
 
   return (
     <main>
@@ -60,7 +67,9 @@ export default async function FavoritesPage() {
         <LibraryDirectory
           favoritesOnly
           initialFavorites={favoriteSlugs}
+          initialLiked={likedSlugs}
           libraries={libraries}
+          likeCounts={likeCounts}
           metrics={metrics}
           signedIn
         />

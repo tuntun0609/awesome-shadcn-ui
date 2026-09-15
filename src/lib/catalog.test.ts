@@ -79,6 +79,17 @@ describe("catalog sorting", () => {
     const result = sortLibraries(libraries, "most-starred", metrics);
     expect(result[0]?.slug).toBe("magic-ui");
   });
+
+  test("orders by like counts with names as tie-breaker", () => {
+    const result = sortLibraries(libraries, "most-liked", emptyMetrics, {
+      efferd: 3,
+      "magic-ui": 5,
+    });
+    expect(result.slice(0, 2).map((item) => item.slug)).toEqual([
+      "magic-ui",
+      "efferd",
+    ]);
+  });
 });
 
 describe("data and dates", () => {

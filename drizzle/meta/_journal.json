@@ -15,6 +15,13 @@
       "when": 1789000802242,
       "tag": "0001_large_banshee",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1789480623399,
+      "tag": "0002_workable_dreadnoughts",
+      "breakpoints": true
     }
   ]
 }

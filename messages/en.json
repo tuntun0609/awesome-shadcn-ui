@@ -47,6 +47,7 @@
     "show": "Show {count}",
     "sort": {
       "featured": "Featured first",
+      "most-liked": "Most liked",
       "most-starred": "Most starred",
       "recently-updated": "Recently updated"
     },
@@ -69,6 +70,13 @@
     "subtitle": "Everything you've hearted, in one place. Removing a favorite updates instantly.",
     "title": "Libraries you've saved.",
     "unfavoriteAction": "Remove {name} from favorites"
+  },
+  "likes": {
+    "error": "Something went wrong. Please try again.",
+    "like": "Like",
+    "likeAction": "Like {name}",
+    "unlike": "Liked",
+    "unlikeAction": "Unlike {name}"
   },
   "filterGroups": {
     "access": "Access",

@@ -47,6 +47,7 @@
     "show": "显示 {count} 个",
     "sort": {
       "featured": "精选优先",
+      "most-liked": "点赞最多",
       "most-starred": "星标最多",
       "recently-updated": "最近更新"
     },
@@ -69,6 +70,13 @@
     "subtitle": "心形标记的组件库都在这里,取消收藏会即时更新。",
     "title": "你保存的组件库。",
     "unfavoriteAction": "取消收藏 {name}"
+  },
+  "likes": {
+    "error": "操作失败,请重试。",
+    "like": "点赞",
+    "likeAction": "点赞 {name}",
+    "unlike": "已点赞",
+    "unlikeAction": "取消点赞 {name}"
   },
   "filterGroups": {
     "access": "获取方式",
