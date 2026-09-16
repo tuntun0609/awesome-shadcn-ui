@@ -56,7 +56,10 @@ export async function uploadR2Object(
 
   const response = await client.fetch(url, {
     body: new Blob([bytes], { type: contentType }),
-    headers: { "Content-Type": contentType },
+    headers: {
+      "Content-Length": String(bytes.byteLength),
+      "Content-Type": contentType,
+    },
     method: "PUT",
   });
   if (!response.ok) {
