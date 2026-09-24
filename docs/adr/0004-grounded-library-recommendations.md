@@ -1,6 +1,6 @@
 # ADR 0004: Ground public Library recommendations in reviewed Catalog profiles
 
-- Status: Accepted
+- Status: Superseded by ADR 0005
 - Date: 2026-09-20
 
 ## Context

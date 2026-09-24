@@ -34,8 +34,9 @@ does not exclude a Library by itself.
 _Avoid_: Filter, requirement
 
 **Library profile**:
-The reviewed discovery facts and representative visuals that describe a
-Library and support preference matching.
+The reviewed discovery facts and representative traits that describe a
+Library and support preference matching. Representative visuals and
+trait-level evidence may be added by later review workflows.
 _Avoid_: AI guess, live website analysis
 
 **Profile trait**:
