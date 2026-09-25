@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { SiteFooter } from "@/components/site-footer";
 import { repositoryUrl, SiteHeader } from "@/components/site-header";
+import { routing } from "@/i18n/routing";
 
 export async function generateMetadata({
   params,
@@ -12,6 +13,8 @@ export async function generateMetadata({
 
   return {
     alternates: {
+      canonical:
+        locale === routing.defaultLocale ? "/about" : `/${locale}/about`,
       languages: {
         en: "/about",
         "x-default": "/about",

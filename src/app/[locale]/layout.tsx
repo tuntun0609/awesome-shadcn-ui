@@ -8,6 +8,7 @@ import { getMessages, getTranslations } from "next-intl/server";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { routing } from "@/i18n/routing";
+import { siteOrigin } from "@/lib/site-origin";
 import { cn } from "@/lib/utils";
 import "../globals.css";
 
@@ -37,9 +38,7 @@ export async function generateMetadata({
 
   return {
     description: t("description"),
-    metadataBase: new URL(
-      process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
-    ),
+    metadataBase: new URL(siteOrigin),
     openGraph: {
       description: t("description"),
       images: [{ height: 900, url: "/og.png", width: 1600 }],

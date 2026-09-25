@@ -19,6 +19,7 @@ import { getCatalog, getCatalogEntry } from "@/db/catalog-data";
 import { isFavorite } from "@/db/favorites-repository";
 import { getLikeCounts, getLikedSlugs } from "@/db/likes-repository";
 import { Link } from "@/i18n/navigation";
+import { routing } from "@/i18n/routing";
 import {
   formatCommitDate,
   formatCompactNumber,
@@ -33,13 +34,17 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({
   params,
 }: PageProps<"/[locale]/libraries/[slug]">): Promise<Metadata> {
-  const { slug } = await params;
+  const { locale, slug } = await params;
   const entry = await getCatalogEntry(slug);
   if (!entry) {
     return {};
   }
   return {
     alternates: {
+      canonical:
+        locale === routing.defaultLocale
+          ? `/libraries/${slug}`
+          : `/${locale}/libraries/${slug}`,
       languages: {
         en: `/libraries/${slug}`,
         "x-default": `/libraries/${slug}`,

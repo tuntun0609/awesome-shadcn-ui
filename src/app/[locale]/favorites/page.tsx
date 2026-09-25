@@ -18,14 +18,8 @@ export async function generateMetadata({
   const t = await getTranslations({ locale, namespace: "favorites" });
 
   return {
-    alternates: {
-      languages: {
-        en: "/favorites",
-        "x-default": "/favorites",
-        zh: "/zh/favorites",
-      },
-    },
     description: t("metadataDescription"),
+    robots: { follow: false, index: false },
     title: t("metadataTitle"),
   };
 }

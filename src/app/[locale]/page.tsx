@@ -8,13 +8,19 @@ import { SiteHeader } from "@/components/site-header";
 import { getCatalog } from "@/db/catalog-data";
 import { getFavoriteSlugs } from "@/db/favorites-repository";
 import { getLikeCounts, getLikedSlugs } from "@/db/likes-repository";
+import { routing } from "@/i18n/routing";
 import { readVisitorId } from "@/lib/visitor-id";
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]">): Promise<Metadata> {
+  const { locale } = await params;
+
   return {
     alternates: {
+      canonical: locale === routing.defaultLocale ? "/" : `/${locale}`,
       languages: { en: "/", "x-default": "/", zh: "/zh" },
     },
   };

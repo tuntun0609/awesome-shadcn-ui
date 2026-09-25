@@ -14,6 +14,7 @@ import { requireAdmin } from "@/lib/admin-auth";
 import "../globals.css";
 
 export const metadata: Metadata = {
+  robots: { follow: false, index: false },
   title: {
     default: "目录管理后台",
     template: "%s | 目录管理后台",
