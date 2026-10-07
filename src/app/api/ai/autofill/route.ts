@@ -54,7 +54,7 @@ function truncateHistory(messages: AutofillChatMessage[]) {
           };
         }
         if (
-          part.type === "tool-fetch_github_repo" &&
+          part.type === "tool-fetch_repository" &&
           part.state === "output-available" &&
           typeof part.output?.readme === "string"
         ) {

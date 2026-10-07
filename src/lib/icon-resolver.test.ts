@@ -134,7 +134,7 @@ describe("icon resolver", () => {
   test("falls back to an official GitHub repository icon", async () => {
     const githubTarget: IconSourceTarget = {
       ...target,
-      github: "https://github.com/example/library",
+      repositoryUrl: "https://github.com/example/library",
     };
     const fetcher = responseMap([
       [target.website, new Response("unavailable", { status: 526 })],
@@ -163,6 +163,40 @@ describe("icon resolver", () => {
     if (resolution.ok) {
       expect(resolution.asset.sourceUrl).toContain(
         "/contents/docs/app/icon.png?ref=main"
+      );
+    }
+  });
+
+  test("falls back to a GitLab repository icon", async () => {
+    const gitlabTarget: IconSourceTarget = {
+      ...target,
+      repositoryUrl: "https://gitlab.com/group/project",
+    };
+    const fetcher = responseMap([
+      [target.website, new Response("unavailable", { status: 526 })],
+      [
+        "https://example.com/favicon.ico",
+        new Response("missing", { status: 404 }),
+      ],
+      [
+        "https://gitlab.com/api/v4/projects/group%2Fproject",
+        Response.json({ default_branch: "main", id: 42 }),
+      ],
+      [
+        "https://gitlab.com/api/v4/projects/42/repository/tree?ref=main&recursive=true&per_page=100&page=1",
+        Response.json([{ path: "public/logo.svg", type: "blob" }]),
+      ],
+      [
+        "https://gitlab.com/api/v4/projects/42/repository/files/public%2Flogo.svg/raw?ref=main",
+        new Response(PNG, { headers: { "Content-Type": "image/png" } }),
+      ],
+    ]);
+    const resolution = await resolveIcon(gitlabTarget, fetcher);
+
+    expect(resolution.ok).toBe(true);
+    if (resolution.ok) {
+      expect(resolution.asset.sourceUrl).toBe(
+        "https://gitlab.com/api/v4/projects/42/repository/files/public%2Flogo.svg/raw?ref=main"
       );
     }
   });

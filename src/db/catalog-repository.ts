@@ -2,19 +2,19 @@ import { asc, eq } from "drizzle-orm";
 import type { Database } from "@/db/client";
 import { getDatabase } from "@/db/client";
 import {
-  githubMetrics,
   libraries,
   libraryDeliveries,
   libraryTags,
   libraryUseCases,
+  repositoryMetrics,
 } from "@/db/schema";
 import type {
   AccessModel,
   CatalogSnapshot,
   DeliveryType,
-  GithubSnapshot,
   Library,
   PricingModel,
+  RepositorySnapshot,
   SourceModel,
   UseCase,
 } from "@/lib/catalog-model";
@@ -61,14 +61,14 @@ export async function readCatalog(
         .orderBy(asc(libraryTags.libraryId), asc(libraryTags.position)),
       db
         .select({
-          latestCommitAt: githubMetrics.latestCommitAt,
-          libraryId: githubMetrics.libraryId,
+          latestCommitAt: repositoryMetrics.latestCommitAt,
+          libraryId: repositoryMetrics.libraryId,
           slug: libraries.slug,
-          stars: githubMetrics.stars,
-          syncedAt: githubMetrics.syncedAt,
+          stars: repositoryMetrics.stars,
+          syncedAt: repositoryMetrics.syncedAt,
         })
-        .from(githubMetrics)
-        .innerJoin(libraries, eq(githubMetrics.libraryId, libraries.id)),
+        .from(repositoryMetrics)
+        .innerJoin(libraries, eq(repositoryMetrics.libraryId, libraries.id)),
     ]);
 
   const deliveryByLibrary = collectValues<DeliveryType>(deliveryRows);
@@ -81,10 +81,10 @@ export async function readCatalog(
     delivery: deliveryByLibrary.get(row.id) ?? [],
     description: row.description,
     featuredRank: row.featuredRank ?? undefined,
-    github: row.github ?? undefined,
     logo: row.logo ?? undefined,
     name: row.name,
     pricing: row.pricing as PricingModel,
+    repositoryUrl: row.repositoryUrl ?? undefined,
     slug: row.slug,
     source: row.source as SourceModel,
     tags: tagsByLibrary.get(row.id) ?? [],
@@ -92,7 +92,7 @@ export async function readCatalog(
     website: row.website,
   }));
 
-  const metrics: GithubSnapshot = {
+  const metrics: RepositorySnapshot = {
     repositories: {},
     syncedAt: null,
   };
@@ -111,8 +111,8 @@ export async function readCatalog(
   return { libraries: catalogLibraries, metrics };
 }
 
-export async function writeGithubSnapshot(
-  snapshot: GithubSnapshot,
+export async function writeRepositorySnapshot(
+  snapshot: RepositorySnapshot,
   providedDatabase?: Database
 ) {
   const db = providedDatabase ?? (await getDatabase());
@@ -129,16 +129,16 @@ export async function writeGithubSnapshot(
         const libraryId = idsBySlug.get(slug);
         if (!libraryId) {
           throw new Error(
-            `Cannot store GitHub metrics for unknown slug: ${slug}`
+            `Cannot store repository metrics for unknown slug: ${slug}`
           );
         }
         return { libraryId, ...metric };
       }
     );
 
-    await transaction.delete(githubMetrics);
+    await transaction.delete(repositoryMetrics);
     if (values.length > 0) {
-      await transaction.insert(githubMetrics).values(values);
+      await transaction.insert(repositoryMetrics).values(values);
     }
   });
 }

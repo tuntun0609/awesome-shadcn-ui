@@ -141,7 +141,8 @@ export function LibraryForm({
     defaultValues,
     resolver: zodResolver(libraryFormSchema),
   });
-  const watchedGithub = useWatch({ control, name: "github" }) ?? "";
+  const watchedRepositoryUrl =
+    useWatch({ control, name: "repositoryUrl" }) ?? "";
   const watchedLogo = useWatch({ control, name: "logo" }) ?? "";
   const watchedName = useWatch({ control, name: "name" }) ?? "";
   const watchedWebsite = useWatch({ control, name: "website" }) ?? "";
@@ -348,16 +349,16 @@ export function LibraryForm({
                     />
                   </FormFieldShell>
                   <FormFieldShell
-                    error={errors.github?.message}
-                    htmlFor="library-github"
-                    label="GitHub 仓库（可选）"
-                    meta={fieldMeta.github}
-                    {...reviewProps("github")}
+                    error={errors.repositoryUrl?.message}
+                    htmlFor="library-repository-url"
+                    label="仓库地址（GitHub/GitLab，可选）"
+                    meta={fieldMeta.repositoryUrl}
+                    {...reviewProps("repositoryUrl")}
                   >
                     <Input
-                      id="library-github"
+                      id="library-repository-url"
                       placeholder="https://github.com/owner/repo"
-                      {...register("github")}
+                      {...register("repositoryUrl")}
                     />
                   </FormFieldShell>
                   <FormFieldShell
@@ -369,7 +370,6 @@ export function LibraryForm({
                     <LogoField
                       collectSignal={logoCollectSignal}
                       file={logoFile}
-                      github={watchedGithub}
                       id="library-logo"
                       logoKey={watchedLogo}
                       name={watchedName}
@@ -378,6 +378,7 @@ export function LibraryForm({
                         setLogoFile(null);
                         setValue("logo", "", { shouldDirty: true });
                       }}
+                      repositoryUrl={watchedRepositoryUrl}
                       website={watchedWebsite}
                     />
                   </FormFieldShell>

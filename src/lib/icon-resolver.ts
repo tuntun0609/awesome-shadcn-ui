@@ -10,11 +10,12 @@ export interface IconAsset {
   sourceUrl: string;
 }
 
-/** 图标采集目标：官网必填；GitHub 仓库与期望的本地扩展名可选。 */
+/** 图标采集目标：官网必填；代码托管仓库（GitHub/GitLab）与期望的本地扩展名可选。 */
 export interface IconSourceTarget {
-  github?: string;
   /** 期望保存的对象 key（如 awesome-shadcn-ui/icons/foo.svg），用于优先选择同扩展名的来源。 */
   logo?: string;
+  /** 代码托管仓库（GitHub/GitLab）的完整 URL。 */
+  repositoryUrl?: string;
   website: string;
 }
 
@@ -59,14 +60,14 @@ const ATTRIBUTE_PATTERN =
 const DECIMAL_ENTITY_PATTERN = /&#(\d+);/g;
 const DOCUMENTATION_PATH_PATTERN = /^(?:docs?|website)\//;
 const GIT_SUFFIX_PATTERN = /\.git$/i;
-const GITHUB_APP_ICON_PATTERN = /(?:^|\/)app\/icon\./;
-const GITHUB_ICON_FILENAME_PATTERN =
-  /^(?:icon|favicon)\.(?:ico|jpe?g|png|svg|webp)$/;
-const GITHUB_IGNORED_PATH_PATTERN =
+const GITLAB_API_BASE = "https://gitlab.com/api/v4";
+const ICON_FILENAME_PATTERN = /^(?:icon|favicon)\.(?:ico|jpe?g|png|svg|webp)$/;
+const IGNORED_PATH_PATTERN =
   /(?:^|\/)(?:examples?|fixtures?|node_modules|tests?)(?:\/|$)/;
-const GITHUB_LOGO_PATTERN = /logo/;
-const GITHUB_PUBLIC_PATH_PATTERN = /(?:^|\/)public\//;
-const GITHUB_TOUCH_ICON_PATTERN = /^(?:apple-)?touch-icon\./;
+const LOGO_PATTERN = /logo/;
+const APP_ICON_PATTERN = /(?:^|\/)app\/icon\./;
+const PUBLIC_PATH_PATTERN = /(?:^|\/)public\//;
+const TOUCH_ICON_PATTERN = /^(?:apple-)?touch-icon\./;
 const HTML_AMPERSAND_PATTERN = /&amp;/gi;
 const HEX_ENTITY_PATTERN = /&#x([\da-f]+);/gi;
 export const LEADING_SLASHES = /^\/+/;
@@ -74,6 +75,8 @@ const LINK_PATTERN = /<link\b[^>]*>/gi;
 const SIZE_PATTERN = /^(\d+)x(\d+)$/i;
 const SUPPORTED_EXTENSION = /\.(?:ico|jpe?g|png|svg|webp)$/i;
 const WHITESPACE_PATTERN = /\s+/;
+/** GitLab 仓库树分页采集上限：图标文件通常在仓库浅层，多页兜底即可。 */
+const GITLAB_TREE_MAX_PAGES = 5;
 
 function decodeHtmlAttribute(value: string) {
   return value
@@ -200,6 +203,16 @@ function githubHeaders(accept = "application/vnd.github+json") {
   };
   if (process.env.GITHUB_TOKEN) {
     headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+  }
+  return headers;
+}
+
+function gitlabHeaders() {
+  const headers: Record<string, string> = {
+    ...requestHeaders("application/json"),
+  };
+  if (process.env.GITLAB_TOKEN) {
+    headers["PRIVATE-TOKEN"] = process.env.GITLAB_TOKEN;
   }
   return headers;
 }
@@ -383,47 +396,64 @@ async function manifestIconCandidates(
     .map((candidate) => ({ url: candidate.url }));
 }
 
-function repositoryPath(githubUrl: string) {
+interface ParsedRepository {
+  path: string;
+  provider: "github" | "gitlab";
+}
+
+function parseRepository(repositoryUrl: string): ParsedRepository | null {
   try {
-    const url = new URL(githubUrl);
-    if (url.hostname !== "github.com") {
+    const url = new URL(repositoryUrl);
+    const host = url.hostname.toLowerCase();
+    const segments = url.pathname
+      .replace(LEADING_SLASHES, "")
+      .split("/")
+      .filter(Boolean);
+    const [owner, repository] = segments;
+    if (!(owner && repository)) {
       return null;
     }
-    const [owner, repository] = url.pathname
-      .replace(LEADING_SLASHES, "")
-      .split("/");
-    return owner && repository
-      ? `${owner}/${repository.replace(GIT_SUFFIX_PATTERN, "")}`
-      : null;
+    const path = `${owner}/${repository.replace(GIT_SUFFIX_PATTERN, "")}`;
+    if (host === "github.com") {
+      return { path, provider: "github" };
+    }
+    // GitLab 支持多级命名空间（group/subgroup/project）。
+    if (host === "gitlab.com" && segments.length >= 2) {
+      return {
+        path: segments.join("/").replace(GIT_SUFFIX_PATTERN, ""),
+        provider: "gitlab",
+      };
+    }
+    return null;
   } catch {
     return null;
   }
 }
 
-function githubIconScore(path: string) {
+function repositoryIconScore(path: string) {
   const lowerPath = path.toLowerCase();
   if (
     !SUPPORTED_EXTENSION.test(lowerPath) ||
-    GITHUB_IGNORED_PATH_PATTERN.test(lowerPath)
+    IGNORED_PATH_PATTERN.test(lowerPath)
   ) {
     return -1;
   }
 
   const filename = lowerPath.split("/").at(-1) ?? "";
   let score = 0;
-  if (GITHUB_ICON_FILENAME_PATTERN.test(filename)) {
+  if (ICON_FILENAME_PATTERN.test(filename)) {
     score += 100;
-  } else if (GITHUB_TOUCH_ICON_PATTERN.test(filename)) {
+  } else if (TOUCH_ICON_PATTERN.test(filename)) {
     score += 90;
-  } else if (GITHUB_LOGO_PATTERN.test(filename)) {
+  } else if (LOGO_PATTERN.test(filename)) {
     score += 50;
   } else {
     return -1;
   }
-  if (GITHUB_APP_ICON_PATTERN.test(lowerPath)) {
+  if (APP_ICON_PATTERN.test(lowerPath)) {
     score += 50;
   }
-  if (GITHUB_PUBLIC_PATH_PATTERN.test(lowerPath)) {
+  if (PUBLIC_PATH_PATTERN.test(lowerPath)) {
     score += 30;
   }
   if (DOCUMENTATION_PATH_PATTERN.test(lowerPath)) {
@@ -433,20 +463,27 @@ function githubIconScore(path: string) {
   return score - lowerPath.split("/").length;
 }
 
-type GithubOutcome = { candidate: IconCandidate } | { failure: string };
+/** 按评分挑选仓库树中最合适的图标文件路径。 */
+function pickRepositoryIconPath(entries: { path?: string; type?: string }[]) {
+  return entries
+    .filter(
+      (item): item is { path: string; type?: string } =>
+        item.type === "blob" && Boolean(item.path)
+    )
+    .map((item) => ({ path: item.path, score: repositoryIconScore(item.path) }))
+    .filter((item) => item.score >= 0)
+    .sort(
+      (left, right) =>
+        right.score - left.score || left.path.localeCompare(right.path)
+    )[0]?.path;
+}
+
+type RepositoryOutcome = { candidate: IconCandidate } | { failure: string };
 
 async function githubIconCandidate(
-  githubUrl: string | undefined,
+  repository: string,
   fetcher: Fetcher
-): Promise<GithubOutcome | null> {
-  if (!githubUrl) {
-    return null;
-  }
-  const repository = repositoryPath(githubUrl);
-  if (!repository) {
-    return { failure: "github: invalid repository URL" };
-  }
-
+): Promise<RepositoryOutcome> {
   try {
     const metadataResponse = await request(
       fetcher,
@@ -480,17 +517,7 @@ async function githubIconCandidate(
     const tree = (await treeResponse.json()) as {
       tree?: { path?: string; type?: string }[];
     };
-    const path = (tree.tree ?? [])
-      .filter(
-        (item): item is { path: string; type?: string } =>
-          item.type === "blob" && Boolean(item.path)
-      )
-      .map((item) => ({ path: item.path, score: githubIconScore(item.path) }))
-      .filter((item) => item.score >= 0)
-      .sort(
-        (left, right) =>
-          right.score - left.score || left.path.localeCompare(right.path)
-      )[0]?.path;
+    const path = pickRepositoryIconPath(tree.tree ?? []);
     if (!path) {
       return { failure: "github: no icon found in repository" };
     }
@@ -509,9 +536,101 @@ async function githubIconCandidate(
   }
 }
 
+async function gitlabIconCandidate(
+  repository: string,
+  fetcher: Fetcher
+): Promise<RepositoryOutcome> {
+  try {
+    // 命名空间路径需要整体编码（group%2Fproject）。
+    const projectResponse = await request(
+      fetcher,
+      {
+        headers: gitlabHeaders(),
+        url: `${GITLAB_API_BASE}/projects/${encodeURIComponent(repository)}`,
+      },
+      1
+    );
+    if (!projectResponse.ok) {
+      return {
+        failure: `gitlab: project lookup failed (HTTP ${projectResponse.status})`,
+      };
+    }
+    const project = (await projectResponse.json()) as {
+      default_branch: string | null;
+      id: number;
+    };
+    // 空仓库没有默认分支，直接判为未找到图标。
+    if (!project.default_branch) {
+      return { failure: "gitlab: no icon found in repository" };
+    }
+    const branch = project.default_branch;
+
+    // GitLab 树接口按页返回，逐页采集直到满足上限或取完。
+    const entries: { path?: string; type?: string }[] = [];
+    for (let page = 1; page <= GITLAB_TREE_MAX_PAGES; page += 1) {
+      // biome-ignore lint/performance/noAwaitInLoops: 分页拉取必须按顺序等待下一页。
+      const treeResponse = await request(
+        fetcher,
+        {
+          headers: gitlabHeaders(),
+          url: `${GITLAB_API_BASE}/projects/${project.id}/repository/tree?ref=${encodeURIComponent(branch)}&recursive=true&per_page=100&page=${page}`,
+        },
+        1
+      );
+      if (!treeResponse.ok) {
+        return {
+          failure: `gitlab: repository tree lookup failed (HTTP ${treeResponse.status})`,
+        };
+      }
+      const tree = (await treeResponse.json()) as {
+        path?: string;
+        type?: string;
+      }[];
+      entries.push(...tree);
+      if (tree.length < 100) {
+        break;
+      }
+    }
+
+    const path = pickRepositoryIconPath(entries);
+    if (!path) {
+      return { failure: "gitlab: no icon found in repository" };
+    }
+
+    return {
+      candidate: {
+        headers: gitlabHeaders(),
+        url: `${GITLAB_API_BASE}/projects/${project.id}/repository/files/${encodeURIComponent(
+          path
+        )}/raw?ref=${encodeURIComponent(branch)}`,
+      },
+    };
+  } catch {
+    return { failure: "gitlab: request failed" };
+  }
+}
+
+function repositoryIconCandidate(
+  repositoryUrl: string | undefined,
+  fetcher: Fetcher
+): Promise<RepositoryOutcome | null> {
+  if (!repositoryUrl) {
+    return Promise.resolve(null);
+  }
+  const repository = parseRepository(repositoryUrl);
+  if (!repository) {
+    return Promise.resolve({
+      failure: "repository: invalid repository URL",
+    });
+  }
+  return repository.provider === "gitlab"
+    ? gitlabIconCandidate(repository.path, fetcher)
+    : githubIconCandidate(repository.path, fetcher);
+}
+
 /**
  * 采集单个目标的图标：解析官网 HTML 声明 → Web App Manifest → /favicon.ico，
- * 全部失败时回退到 GitHub 仓库内的图标文件。
+ * 全部失败时回退到代码托管仓库（GitHub/GitLab）内的图标文件。
  */
 export async function resolveIcon(
   target: IconSourceTarget,
@@ -560,7 +679,10 @@ export async function resolveIcon(
   }
   failures.push(...websiteOutcome.failures);
 
-  const repositoryOutcome = await githubIconCandidate(target.github, fetcher);
+  const repositoryOutcome = await repositoryIconCandidate(
+    target.repositoryUrl,
+    fetcher
+  );
   if (repositoryOutcome === null || "failure" in repositoryOutcome) {
     if (repositoryOutcome) {
       failures.push(repositoryOutcome.failure);

@@ -212,24 +212,29 @@ function FetchPageCard({
   );
 }
 
-/** fetch_github_repo 工具卡片：仓库元数据与查看 README 入口。 */
-function FetchGithubRepoCard({
+/** fetch_repository 工具卡片：仓库元数据与查看 README 入口。 */
+function FetchRepositoryCard({
   onOpenMaterial,
   part,
 }: {
   onOpenMaterial: (material: MaterialState) => void;
-  part: Extract<ToolPart, { type: "tool-fetch_github_repo" }>;
+  part: Extract<ToolPart, { type: "tool-fetch_repository" }>;
 }) {
   const input = part.state === "input-streaming" ? undefined : part.input;
   const output = part.state === "output-available" ? part.output : undefined;
   const readme = output?.ok === true ? output.readme : undefined;
+  const resolvedRepository = output?.ok === true ? output.resolvedRepo : null;
+  const repositoryLabel =
+    resolvedRepository ?? (input ? `${input.repository}` : undefined) ?? "";
+  const providerHost =
+    input?.provider === "gitlab" ? "https://gitlab.com" : "https://github.com";
   return (
     <div className="flex flex-col gap-1.5 rounded-xl border px-3 py-2 text-sm">
       <div className="flex items-center gap-2">
         <ToolStatusIcon ok={output?.ok === true} state={part.state} />
-        <span className="font-medium">抓取 GitHub 仓库</span>
+        <span className="font-medium">抓取仓库</span>
         <span className="min-w-0 flex-1 truncate text-muted-foreground">
-          {input ? `${input.owner}/${input.repo}` : ""}
+          {input ? `${input.provider} · ${repositoryLabel}` : ""}
         </span>
       </div>
       {output?.ok === false ? (
@@ -245,8 +250,8 @@ function FetchGithubRepoCard({
               onClick={() =>
                 onOpenMaterial({
                   content: readme,
-                  title: `${input.owner}/${input.repo} README`,
-                  url: `https://github.com/${input.owner}/${input.repo}`,
+                  title: `${repositoryLabel} README`,
+                  url: `${providerHost}/${repositoryLabel}`,
                 })
               }
               type="button"
@@ -276,8 +281,8 @@ function ToolPartView({
   if (part.type === "tool-fetch_page") {
     return <FetchPageCard onOpenMaterial={onOpenMaterial} part={part} />;
   }
-  if (part.type === "tool-fetch_github_repo") {
-    return <FetchGithubRepoCard onOpenMaterial={onOpenMaterial} part={part} />;
+  if (part.type === "tool-fetch_repository") {
+    return <FetchRepositoryCard onOpenMaterial={onOpenMaterial} part={part} />;
   }
   return null;
 }

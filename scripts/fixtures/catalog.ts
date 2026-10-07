@@ -1,4 +1,4 @@
-import type { GithubSnapshot, Library } from "../../src/lib/catalog-model";
+import type { Library, RepositorySnapshot } from "../../src/lib/catalog-model";
 
 export const seedLibraries = [
   {
@@ -8,10 +8,10 @@ export const seedLibraries = [
     description:
       "Animated components and effects for expressive product and marketing interfaces.",
     featuredRank: 1,
-    github: "https://github.com/magicuidesign/magicui",
     logo: "awesome-shadcn-ui/icons/magic-ui.ico",
     name: "Magic UI",
     pricing: "freemium",
+    repositoryUrl: "https://github.com/magicuidesign/magicui",
     slug: "magic-ui",
     source: "open-source",
     tags: ["animation", "motion", "landing pages"],
@@ -41,10 +41,10 @@ export const seedLibraries = [
     description:
       "Animated React primitives built with Motion, Tailwind CSS, Base UI, and Radix UI.",
     featuredRank: 3,
-    github: "https://github.com/imskyleen/animate-ui",
     logo: "awesome-shadcn-ui/icons/animate-ui.ico",
     name: "Animate UI",
     pricing: "free",
+    repositoryUrl: "https://github.com/imskyleen/animate-ui",
     slug: "animate-ui",
     source: "open-source",
     tags: ["animation", "primitives", "motion"],
@@ -58,10 +58,10 @@ export const seedLibraries = [
     description:
       "A broad shadcn collection spanning application UI, data tools, and marketing blocks.",
     featuredRank: 4,
-    github: "https://github.com/keenthemes/reui",
     logo: "awesome-shadcn-ui/icons/reui.ico",
     name: "ReUI",
     pricing: "freemium",
+    repositoryUrl: "https://github.com/keenthemes/reui",
     slug: "reui",
     source: "open-source",
     tags: ["application UI", "charts", "forms"],
@@ -75,10 +75,10 @@ export const seedLibraries = [
     description:
       "Composable application components for complex workflows beyond the core shadcn set.",
     featuredRank: 5,
-    github: "https://github.com/shadcnblocks/kibo",
     logo: "awesome-shadcn-ui/icons/kibo-ui.png",
     name: "Kibo UI",
     pricing: "free",
+    repositoryUrl: "https://github.com/shadcnblocks/kibo",
     slug: "kibo-ui",
     source: "open-source",
     tags: ["application UI", "ai", "editor"],
@@ -91,10 +91,10 @@ export const seedLibraries = [
     delivery: ["components"],
     description:
       "Accessible, composable primitives for building richer interactions and application interfaces.",
-    github: "https://github.com/sadmann7/diceui",
     logo: "awesome-shadcn-ui/icons/dice-ui.png",
     name: "Dice UI",
     pricing: "free",
+    repositoryUrl: "https://github.com/sadmann7/diceui",
     slug: "dice-ui",
     source: "open-source",
     tags: ["primitives", "accessible", "application UI"],
@@ -107,10 +107,10 @@ export const seedLibraries = [
     delivery: ["components", "blocks"],
     description:
       "Playful, production-ready components and blocks with a focused shadcn registry.",
-    github: "https://github.com/kokonut-labs/kokonutui",
     logo: "awesome-shadcn-ui/icons/kokonut-ui.png",
     name: "Kokonut UI",
     pricing: "freemium",
+    repositoryUrl: "https://github.com/kokonut-labs/kokonutui",
     slug: "kokonut-ui",
     source: "open-source",
     tags: ["animation", "application UI", "landing pages"],
@@ -123,10 +123,10 @@ export const seedLibraries = [
     delivery: ["components", "blocks"],
     description:
       "An open component collection with an optional Pro registry for larger interface sections.",
-    github: "https://github.com/starc007/ui-components",
     logo: "awesome-shadcn-ui/icons/beui.png",
     name: "beUI",
     pricing: "freemium",
+    repositoryUrl: "https://github.com/starc007/ui-components",
     slug: "beui",
     source: "open-source",
     tags: ["application UI", "forms", "effects"],
@@ -169,10 +169,10 @@ export const seedLibraries = [
     delivery: ["components", "blocks"],
     description:
       "Open UI components and interface sections from Coss, formerly published as Origin UI.",
-    github: "https://github.com/cosscom/coss",
     logo: "awesome-shadcn-ui/icons/coss-ui.ico",
     name: "coss ui",
     pricing: "free",
+    repositoryUrl: "https://github.com/cosscom/coss",
     slug: "coss-ui",
     source: "open-source",
     tags: ["application UI", "forms", "navigation"],
@@ -185,10 +185,10 @@ export const seedLibraries = [
     delivery: ["components"],
     description:
       "Animated React components for text, backgrounds, and interactions with shadcn CLI support.",
-    github: "https://github.com/DavidHDev/react-bits",
     logo: "awesome-shadcn-ui/icons/react-bits.ico",
     name: "React Bits",
     pricing: "freemium",
+    repositoryUrl: "https://github.com/DavidHDev/react-bits",
     slug: "react-bits",
     source: "source-available",
     tags: ["animation", "text effects", "backgrounds"],
@@ -197,7 +197,7 @@ export const seedLibraries = [
   },
 ] satisfies Library[];
 
-export const seedGithubSnapshot = {
+export const seedRepositorySnapshot = {
   repositories: {
     "animate-ui": {
       latestCommitAt: "2025-12-31T12:51:05Z",
@@ -246,4 +246,4 @@ export const seedGithubSnapshot = {
     },
   },
   syncedAt: "2026-09-01T09:49:50.646Z",
-} satisfies GithubSnapshot;
+} satisfies RepositorySnapshot;

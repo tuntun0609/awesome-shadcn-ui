@@ -35,9 +35,9 @@ import {
 import {
   accessModels,
   deliveryTypes,
-  type GithubSnapshot,
   type Library,
   pricingModels,
+  type RepositorySnapshot,
   sourceModels,
   useCases,
 } from "@/lib/catalog-model";
@@ -54,7 +54,7 @@ interface LibraryDirectoryProps {
   libraries: Library[];
   /** 各组件库的初始点赞数，以 slug 为键。 */
   likeCounts?: Record<string, number>;
-  metrics: GithubSnapshot;
+  metrics: RepositorySnapshot;
   /** 当前用户是否已登录；未登录时点击收藏会引导登录。 */
   signedIn?: boolean;
 }

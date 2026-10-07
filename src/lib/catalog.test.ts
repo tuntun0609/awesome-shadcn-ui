@@ -4,7 +4,7 @@ import {
   type CatalogFilters,
   filterLibraries,
   formatCommitDate,
-  type GithubSnapshot,
+  type RepositorySnapshot,
   sortLibraries,
 } from "./catalog";
 import {
@@ -24,7 +24,7 @@ const emptyFilters: CatalogFilters = {
   useCases: [],
 };
 
-const emptyMetrics: GithubSnapshot = { repositories: {}, syncedAt: null };
+const emptyMetrics: RepositorySnapshot = { repositories: {}, syncedAt: null };
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const libraries = seedLibraries;
 
@@ -65,8 +65,8 @@ describe("catalog sorting", () => {
     ]);
   });
 
-  test("sorts missing GitHub metrics after known star counts", () => {
-    const metrics: GithubSnapshot = {
+  test("sorts missing repository metrics after known star counts", () => {
+    const metrics: RepositorySnapshot = {
       repositories: {
         "magic-ui": {
           latestCommitAt: null,
@@ -100,8 +100,8 @@ describe("data and dates", () => {
     for (const item of libraries) {
       expect(item.slug).toMatch(SLUG_PATTERN);
       expect(() => new URL(item.website)).not.toThrow();
-      if (item.github) {
-        expect(() => new URL(item.github as string)).not.toThrow();
+      if (item.repositoryUrl) {
+        expect(() => new URL(item.repositoryUrl as string)).not.toThrow();
       }
       expect(sourceModels).toContain(item.source);
       expect(pricingModels).toContain(item.pricing);

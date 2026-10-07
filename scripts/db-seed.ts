@@ -2,13 +2,13 @@ import { fileURLToPath } from "node:url";
 import { inArray, sql } from "drizzle-orm";
 import { type Database, getDatabase } from "../src/db/client";
 import {
-  githubMetrics,
   libraries,
   libraryDeliveries,
   libraryTags,
   libraryUseCases,
+  repositoryMetrics,
 } from "../src/db/schema";
-import { seedGithubSnapshot, seedLibraries } from "./fixtures/catalog";
+import { seedLibraries, seedRepositorySnapshot } from "./fixtures/catalog";
 
 export async function seedCatalog(database: Database) {
   await database.transaction(async (transaction) => {
@@ -27,10 +27,10 @@ export async function seedCatalog(database: Database) {
           addedAt: library.addedAt,
           description: library.description,
           featuredRank: library.featuredRank ?? null,
-          github: library.github ?? null,
           logo: library.logo ?? null,
           name: library.name,
           pricing: library.pricing,
+          repositoryUrl: library.repositoryUrl ?? null,
           slug: library.slug,
           source: library.source,
           website: library.website,
@@ -42,10 +42,10 @@ export async function seedCatalog(database: Database) {
           addedAt: sql`excluded.added_at`,
           description: sql`excluded.description`,
           featuredRank: sql`excluded.featured_rank`,
-          github: sql`excluded.github`,
           logo: sql`excluded.logo`,
           name: sql`excluded.name`,
           pricing: sql`excluded.pricing`,
+          repositoryUrl: sql`excluded.repository_url`,
           source: sql`excluded.source`,
           updatedAt: sql`CURRENT_TIMESTAMP`,
           website: sql`excluded.website`,
@@ -108,12 +108,12 @@ export async function seedCatalog(database: Database) {
     );
 
     await transaction
-      .delete(githubMetrics)
-      .where(inArray(githubMetrics.libraryId, libraryIds));
+      .delete(repositoryMetrics)
+      .where(inArray(repositoryMetrics.libraryId, libraryIds));
     await transaction
-      .insert(githubMetrics)
+      .insert(repositoryMetrics)
       .values(
-        Object.entries(seedGithubSnapshot.repositories).map(
+        Object.entries(seedRepositorySnapshot.repositories).map(
           ([slug, metric]) => ({ libraryId: getLibraryId(slug), ...metric })
         )
       );

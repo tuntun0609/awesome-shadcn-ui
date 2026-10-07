@@ -4,16 +4,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DeleteLibraryButton } from "@/components/admin/delete-library-button";
-import { GithubMetricsCard } from "@/components/admin/github-metrics-card";
 import { LibraryForm } from "@/components/admin/library-form";
+import { RepositoryMetricsCard } from "@/components/admin/repository-metrics-card";
 import { Button } from "@/components/ui/button";
 import { getDatabase } from "@/db/client";
 import {
-  githubMetrics,
   libraries,
   libraryDeliveries,
   libraryTags,
   libraryUseCases,
+  repositoryMetrics,
 } from "@/db/schema";
 import type { LibraryFormInput } from "@/lib/library-form-schema";
 
@@ -45,8 +45,8 @@ async function loadLibrary(id: number) {
         .orderBy(asc(libraryTags.position)),
       db
         .select()
-        .from(githubMetrics)
-        .where(eq(githubMetrics.libraryId, id))
+        .from(repositoryMetrics)
+        .where(eq(repositoryMetrics.libraryId, id))
         .limit(1),
     ]);
 
@@ -129,8 +129,7 @@ export default async function EditLibraryPage({
         </div>
       </div>
 
-      <GithubMetricsCard
-        github={library.github ?? ""}
+      <RepositoryMetricsCard
         libraryId={library.id}
         metric={
           metrics
@@ -141,6 +140,7 @@ export default async function EditLibraryPage({
               }
             : null
         }
+        repositoryUrl={library.repositoryUrl ?? ""}
       />
 
       <LibraryForm
@@ -150,10 +150,10 @@ export default async function EditLibraryPage({
           deliveries,
           description: library.description,
           featuredRank: String(library.featuredRank ?? ""),
-          github: library.github ?? "",
           logo: library.logo ?? "",
           name: library.name,
           pricing: library.pricing as LibraryFormInput["pricing"],
+          repositoryUrl: library.repositoryUrl ?? "",
           slug: library.slug,
           source: library.source as LibraryFormInput["source"],
           tags,

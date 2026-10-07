@@ -42,10 +42,10 @@ export interface Library {
   delivery: DeliveryType[];
   description: string;
   featuredRank?: number;
-  github?: string;
   logo?: string;
   name: string;
   pricing: PricingModel;
+  repositoryUrl?: string;
   slug: string;
   source: SourceModel;
   tags: string[];
@@ -53,18 +53,18 @@ export interface Library {
   website: string;
 }
 
-export interface GithubMetric {
+export interface RepositoryMetric {
   latestCommitAt: string | null;
   stars: number;
   syncedAt: string;
 }
 
-export interface GithubSnapshot {
-  repositories: Record<string, GithubMetric>;
+export interface RepositorySnapshot {
+  repositories: Record<string, RepositoryMetric>;
   syncedAt: string | null;
 }
 
 export interface CatalogSnapshot {
   libraries: Library[];
-  metrics: GithubSnapshot;
+  metrics: RepositorySnapshot;
 }

@@ -21,7 +21,7 @@ describe("batch autofill", () => {
       entry("slug", "example"),
       entry("description", "Example components."),
       entry("website", "https://example.com"),
-      entry("github", ""),
+      entry("repositoryUrl", ""),
       entry("source", "open-source"),
       entry("pricing", "free"),
       entry("access", "direct"),

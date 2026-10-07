@@ -3,11 +3,11 @@ import { PlusIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LibraryTable } from "@/components/admin/library-table";
-import { SyncGithubMetricsButton } from "@/components/admin/sync-github-metrics-button";
 import { SyncLibraryLogosButton } from "@/components/admin/sync-library-logos-button";
+import { SyncRepositoryMetricsButton } from "@/components/admin/sync-repository-metrics-button";
 import { Button } from "@/components/ui/button";
 import { getDatabase } from "@/db/client";
-import { githubMetrics, libraries } from "@/db/schema";
+import { libraries, repositoryMetrics } from "@/db/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -20,11 +20,11 @@ export interface LibraryListRow {
   addedAt: string;
   description: string;
   featuredRank: number | null;
-  github: string | null;
   id: number;
   logo: string | null;
   name: string;
   pricing: string;
+  repositoryUrl: string | null;
   slug: string;
   source: string;
   stars: number | null;
@@ -40,19 +40,19 @@ export default async function AdminLibrariesPage() {
       addedAt: libraries.addedAt,
       description: libraries.description,
       featuredRank: libraries.featuredRank,
-      github: libraries.github,
       id: libraries.id,
       logo: libraries.logo,
       name: libraries.name,
       pricing: libraries.pricing,
+      repositoryUrl: libraries.repositoryUrl,
       slug: libraries.slug,
       source: libraries.source,
-      stars: githubMetrics.stars,
+      stars: repositoryMetrics.stars,
       updatedAt: libraries.updatedAt,
       website: libraries.website,
     })
     .from(libraries)
-    .leftJoin(githubMetrics, eq(githubMetrics.libraryId, libraries.id))
+    .leftJoin(repositoryMetrics, eq(repositoryMetrics.libraryId, libraries.id))
     .orderBy(asc(libraries.id));
 
   return (
@@ -70,8 +70,8 @@ export default async function AdminLibrariesPage() {
           <SyncLibraryLogosButton
             total={rows.filter((row) => !row.logo).length}
           />
-          <SyncGithubMetricsButton
-            total={rows.filter((row) => row.github).length}
+          <SyncRepositoryMetricsButton
+            total={rows.filter((row) => row.repositoryUrl).length}
           />
           <Button
             nativeButton={false}

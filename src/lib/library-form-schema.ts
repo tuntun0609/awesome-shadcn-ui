@@ -62,6 +62,23 @@ const optionalUrlSchema = z.union([urlSchema, z.literal("")]);
 
 export { urlSchema };
 
+/** 支持的代码托管平台域名；仓库地址采集仅覆盖这些站点。 */
+const REPOSITORY_HOSTS = new Set(["github.com", "gitlab.com"]);
+
+const repositoryUrlSchema = optionalUrlSchema.refine(
+  (value) => {
+    if (value === "") {
+      return true;
+    }
+    try {
+      return REPOSITORY_HOSTS.has(new URL(value).hostname.toLowerCase());
+    } catch {
+      return false;
+    }
+  },
+  { message: "仓库地址需为 GitHub 或 GitLab 仓库 URL" }
+);
+
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const LOGO_KEY_PATTERN =
   /^awesome-shadcn-ui\/icons\/[a-z0-9]+(-[a-z0-9]+)*\.(ico|png|svg|webp)$/;
@@ -104,7 +121,6 @@ export const libraryFormSchema = z.object({
         ctx.addIssue({ code: "custom", message: "精选位次必须大于 0" });
       }
     }),
-  github: optionalUrlSchema,
   logo: z
     .string()
     .trim()
@@ -114,6 +130,7 @@ export const libraryFormSchema = z.object({
     }),
   name: z.string().trim().min(1, "请填写名称"),
   pricing: z.enum(["free", "freemium", "paid", "undisclosed"]),
+  repositoryUrl: repositoryUrlSchema,
   slug: slugSchema,
   source: z.enum([
     "open-source",

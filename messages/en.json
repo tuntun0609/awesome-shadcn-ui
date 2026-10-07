@@ -118,7 +118,7 @@
     "bestSuitedFor": "Best suited for",
     "pricing": "Pricing",
     "related": "Related libraries",
-    "snapshot": "Manual GitHub snapshot",
+    "snapshot": "Manual repository snapshot",
     "source": "Source",
     "viewRepository": "View repository",
     "visitSite": "Visit official site",
@@ -142,9 +142,9 @@
         "body": "Inclusion is based on each project’s own public claims. We do not run installation commands, validate registry contents, or guarantee compatibility. Pricing and licensing can change; use the official site as the source of truth before adopting a library.",
         "heading": "A necessary disclaimer"
       },
-      "github": {
-        "body": "Stars and the latest default-branch commit date are stored as a manual snapshot. Libraries without a public repository simply omit those values. Older snapshots are labeled as potentially outdated instead of being presented as live data.",
-        "heading": "GitHub activity"
+      "repository": {
+        "body": "Stars and the latest default-branch commit date are stored as a manual snapshot, collected from public GitHub or GitLab repositories. Libraries without a public repository simply omit those values. Older snapshots are labeled as potentially outdated instead of being presented as live data.",
+        "heading": "Repository activity"
       },
       "scope": {
         "body": "Awesome shadcn/ui lists UI libraries that publicly describe a way to install their work with the shadcn CLI or a compatible registry. The directory is organized at the library level, not the individual component level.",

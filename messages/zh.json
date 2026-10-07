@@ -118,7 +118,7 @@
     "bestSuitedFor": "适用场景",
     "pricing": "定价",
     "related": "相关组件库",
-    "snapshot": "GitHub 数据手动快照",
+    "snapshot": "仓库数据手动快照",
     "source": "源码",
     "viewRepository": "查看仓库",
     "visitSite": "访问官方网站",
@@ -142,9 +142,9 @@
         "body": "收录基于各项目自己的公开声明。我们不会运行安装命令、验证 registry 内容,也不保证兼容性。定价与授权可能变化;在采用某个库之前,请以官方网站为准。",
         "heading": "必要的声明"
       },
-      "github": {
-        "body": "星标数与默认分支的最近提交日期以手动快照形式保存。没有公开仓库的库会省略这些数值。较旧的快照会标注为可能过期,而非当作实时数据呈现。",
-        "heading": "GitHub 活跃度"
+      "repository": {
+        "body": "星标数与默认分支的最近提交日期以手动快照形式保存，数据来自 GitHub 或 GitLab 公开仓库。没有公开仓库的库会省略这些数值。较旧的快照会标注为可能过期,而非当作实时数据呈现。",
+        "heading": "仓库活跃度"
       },
       "scope": {
         "body": "Awesome shadcn/ui 收录公开说明可用 shadcn CLI 或兼容 registry 安装的 UI 库。目录以库为单位组织,而非单个组件。",

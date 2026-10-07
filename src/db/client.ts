@@ -1,24 +1,24 @@
 import { type Client, createClient } from "@libsql/client";
 import { drizzle, type LibSQLDatabase } from "drizzle-orm/libsql";
 import {
-  githubMetrics,
   libraries,
   libraryDeliveries,
   libraryFavorites,
   libraryLikes,
   libraryTags,
   libraryUseCases,
+  repositoryMetrics,
 } from "@/db/schema";
 
 const DEFAULT_DATABASE_URL = "file:local.db";
 const databaseSchema = {
-  githubMetrics,
   libraries,
   libraryDeliveries,
   libraryFavorites,
   libraryLikes,
   libraryTags,
   libraryUseCases,
+  repositoryMetrics,
 };
 
 export type Database = LibSQLDatabase<typeof databaseSchema>;

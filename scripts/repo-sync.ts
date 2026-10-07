@@ -1,13 +1,21 @@
 import { fileURLToPath } from "node:url";
-import { readCatalog, writeGithubSnapshot } from "../src/db/catalog-repository";
-import type { GithubMetric, GithubSnapshot } from "../src/lib/catalog-model";
-import { fetchGithubMetrics } from "../src/lib/github-metrics-fetcher";
+import {
+  readCatalog,
+  writeRepositorySnapshot,
+} from "../src/db/catalog-repository";
+import type {
+  RepositoryMetric,
+  RepositorySnapshot,
+} from "../src/lib/catalog-model";
+import { fetchRepositoryMetrics } from "../src/lib/repository-metrics-fetcher";
 
-export type RepositoryMetric = GithubMetric;
-export type MetricsSnapshot = GithubSnapshot;
+export type {
+  RepositoryMetric,
+  RepositorySnapshot,
+} from "../src/lib/catalog-model";
 
 interface SyncTarget {
-  github: string;
+  repositoryUrl: string;
   slug: string;
 }
 
@@ -15,7 +23,7 @@ type Fetcher = typeof fetch;
 
 export async function syncRepositories(
   targets: SyncTarget[],
-  previous: MetricsSnapshot,
+  previous: RepositorySnapshot,
   fetcher: Fetcher = fetch,
   now = new Date()
 ) {
@@ -26,8 +34,8 @@ export async function syncRepositories(
   await Promise.all(
     targets.map(async (target) => {
       try {
-        repositories[target.slug] = await fetchGithubMetrics(
-          target.github,
+        repositories[target.slug] = await fetchRepositoryMetrics(
+          target.repositoryUrl,
           fetcher,
           now
         );
@@ -49,10 +57,12 @@ export async function syncRepositories(
 async function run() {
   const catalog = await readCatalog();
   const targets = catalog.libraries.flatMap((library) =>
-    library.github ? [{ github: library.github, slug: library.slug }] : []
+    library.repositoryUrl
+      ? [{ repositoryUrl: library.repositoryUrl, slug: library.slug }]
+      : []
   );
   const result = await syncRepositories(targets, catalog.metrics);
-  await writeGithubSnapshot(result.snapshot);
+  await writeRepositorySnapshot(result.snapshot);
 
   console.log(
     `Synced ${Object.keys(result.snapshot.repositories).length}/${targets.length} repositories.`

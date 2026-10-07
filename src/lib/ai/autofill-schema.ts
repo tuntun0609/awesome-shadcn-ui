@@ -6,9 +6,9 @@ export const AUTOFILL_FIELD_NAMES = [
   "access",
   "deliveries",
   "description",
-  "github",
   "name",
   "pricing",
+  "repositoryUrl",
   "slug",
   "source",
   "tags",
@@ -65,14 +65,15 @@ export interface FetchPageOutput {
   truncated?: boolean;
 }
 
-/** fetch_github_repo 的输出。 */
-export interface FetchGithubRepoOutput {
+/** fetch_repository 的输出。 */
+export interface FetchRepositoryOutput {
   description?: string | null;
   error?: string;
   homepage?: string | null;
   license?: string | null;
   ok: boolean;
   readme?: string;
+  resolvedRepo?: string | null;
   topics?: string[];
 }
 
@@ -81,13 +82,13 @@ export type AutofillChatMessage = UIMessage<
   never,
   never,
   {
-    fetch_github_repo: {
-      input: { owner: string; repo: string };
-      output: FetchGithubRepoOutput;
-    };
     fetch_page: {
       input: { url: string };
       output: FetchPageOutput;
+    };
+    fetch_repository: {
+      input: { provider: "github" | "gitlab"; repository: string };
+      output: FetchRepositoryOutput;
     };
     fill_fields: {
       input: FillFieldsInput;

@@ -34,7 +34,7 @@ import {
 } from "../src/lib/ai/autofill-schema";
 import { AUTOFILL_INSTRUCTIONS } from "../src/lib/ai/instructions";
 import { getAutofillModel } from "../src/lib/ai/provider";
-import { fetchGithubRepoTool, fetchPageTool } from "../src/lib/ai/tools";
+import { fetchPageTool, fetchRepositoryTool } from "../src/lib/ai/tools";
 import { libraryFormSchema } from "../src/lib/library-form-schema";
 
 /** 工具循环步数上限：与网页版 autofill 保持一致。 */
@@ -48,7 +48,7 @@ const URL_PATTERN = /^https?:\/\//;
 const DEFAULTED_FIELDS: Partial<Record<AutofillFieldName, string | string[]>> =
   {
     deliveries: [],
-    github: "",
+    repositoryUrl: "",
     tags: [],
     useCases: [],
   };
@@ -70,7 +70,7 @@ const DISPLAY_ORDER: AutofillFieldName[] = [
   "slug",
   "description",
   "website",
-  "github",
+  "repositoryUrl",
   "source",
   "pricing",
   "access",
@@ -88,8 +88,8 @@ type Draft = Map<AutofillFieldName, DraftEntry>;
 
 function buildTools(draft: Draft) {
   return {
-    fetch_github_repo: fetchGithubRepoTool,
     fetch_page: fetchPageTool,
+    fetch_repository: fetchRepositoryTool,
     fill_fields: tool({
       description:
         "Fill multiple catalog fields in ONE call after gathering material. Each entry includes field, value, source and confidence (0-1). Values are validated independently and invalid fields are reported back for correction.",
@@ -110,9 +110,12 @@ function describeToolInput(toolName: string, input: unknown) {
   if (toolName === "fetch_page") {
     return String((input as { url?: unknown }).url ?? "");
   }
-  if (toolName === "fetch_github_repo") {
-    const { owner, repo } = input as { owner?: unknown; repo?: unknown };
-    return `${String(owner ?? "?")}/${String(repo ?? "?")}`;
+  if (toolName === "fetch_repository") {
+    const { provider, repository } = input as {
+      provider?: unknown;
+      repository?: unknown;
+    };
+    return `${String(provider ?? "?")} · ${String(repository ?? "?")}`;
   }
   if (toolName === "fill_fields") {
     const { fields } = input as { fields?: unknown[] };
@@ -162,7 +165,7 @@ async function editField(draft: Draft, rl: Interface) {
   }
   const field = DISPLAY_ORDER[index];
   const raw = await rl.question(
-    `  新的 ${FIELD_LABELS[field]}（数组字段用逗号分隔，github 留空表示无仓库）：`
+    `  新的 ${FIELD_LABELS[field]}（数组字段用逗号分隔，仓库地址留空表示无仓库）：`
   );
   const check = libraryFormSchema.shape[field].safeParse(
     coerceArrayInput(field, raw.trim())
@@ -222,7 +225,7 @@ async function persist(draft: Draft, today: string) {
     throw new Error(`slug "${slug}" 已存在，更新已有条目请使用管理后台编辑页`);
   }
 
-  const github = String(draftValue(draft, "github"));
+  const repositoryUrl = String(draftValue(draft, "repositoryUrl"));
   await db.transaction(async (tx) => {
     const inserted = await tx
       .insert(libraries)
@@ -230,9 +233,9 @@ async function persist(draft: Draft, today: string) {
         access: String(draftValue(draft, "access")),
         addedAt: today,
         description: String(draftValue(draft, "description")),
-        github: github === "" ? null : github,
         name: String(draftValue(draft, "name")),
         pricing: String(draftValue(draft, "pricing")),
+        repositoryUrl: repositoryUrl === "" ? null : repositoryUrl,
         slug,
         source: String(draftValue(draft, "source")),
         website: String(draftValue(draft, "website")),
@@ -326,7 +329,7 @@ async function run() {
     await persist(draft, today);
     const name = String(draftValue(draft, "name"));
     console.log(`✓ 已入库：${name}（${String(draftValue(draft, "slug"))}）`);
-    console.log("│ 提示：运行 bun run sync:github 同步 GitHub 指标");
+    console.log("│ 提示：运行 bun run sync:repos 同步仓库指标");
   } finally {
     rl.close();
   }

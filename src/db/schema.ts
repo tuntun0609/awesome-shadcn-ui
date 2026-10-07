@@ -22,8 +22,6 @@ export const libraries = sqliteTable(
     description: text("description").notNull(),
     /** 精选列表中的人工排序位次；为空表示未精选。 */
     featuredRank: integer("featured_rank"),
-    /** GitHub 仓库的完整 URL；为空表示未关联仓库。 */
-    github: text("github"),
     /** 仅供数据库内部关联使用的自增主键。 */
     id: integer("id").primaryKey({ autoIncrement: true }),
     /** R2 中 Logo 对象的 key（如 icons/foo.svg）；为空表示没有图标。 */
@@ -32,6 +30,8 @@ export const libraries = sqliteTable(
     name: text("name").notNull(),
     /** 组件库的收费模式。 */
     pricing: text("pricing").notNull(),
+    /** 代码托管仓库（GitHub 或 GitLab）的完整 URL；为空表示未关联仓库。 */
+    repositoryUrl: text("repository_url"),
     /** 用于公开 URL 的唯一 kebab-case 标识。 */
     slug: text("slug").notNull(),
     /** 组件库源码的开放程度。 */
@@ -199,8 +199,8 @@ export const libraryLikes = sqliteTable(
   ]
 );
 
-export const githubMetrics = sqliteTable(
-  "github_metrics",
+export const repositoryMetrics = sqliteTable(
+  "repository_metrics",
   {
     /** 默认分支最近一次提交的时间；为空表示未知。 */
     latestCommitAt: text("latest_commit_at"),
@@ -208,21 +208,21 @@ export const githubMetrics = sqliteTable(
     libraryId: integer("library_id")
       .primaryKey()
       .references(() => libraries.id, { onDelete: "cascade" }),
-    /** 同步时记录的 GitHub Star 数量。 */
+    /** 同步时记录的仓库 Star 数量。 */
     stars: integer("stars").notNull(),
-    /** 本条 GitHub 指标成功同步的时间。 */
+    /** 本条仓库指标成功同步的时间。 */
     syncedAt: text("synced_at").notNull(),
   },
   (table) => [
-    index("github_metrics_stars_idx").on(table.stars),
-    index("github_metrics_latest_commit_at_idx").on(table.latestCommitAt),
-    check("github_metrics_stars_check", sql`${table.stars} >= 0`),
+    index("repository_metrics_stars_idx").on(table.stars),
+    index("repository_metrics_latest_commit_at_idx").on(table.latestCommitAt),
+    check("repository_metrics_stars_check", sql`${table.stars} >= 0`),
     check(
-      "github_metrics_latest_commit_at_check",
+      "repository_metrics_latest_commit_at_check",
       sql`${table.latestCommitAt} is null or datetime(${table.latestCommitAt}) is not null`
     ),
     check(
-      "github_metrics_synced_at_check",
+      "repository_metrics_synced_at_check",
       sql`datetime(${table.syncedAt}) is not null`
     ),
   ]

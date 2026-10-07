@@ -12,7 +12,7 @@ A filterable, searchable directory of UI libraries that publicly support the sha
 
 - **Multi-facet filtering**: combine delivery type (components / blocks / templates), use case (marketing, dashboard, commerce, content, data display, AI), pricing, source model, and access model
 - **Search**: quick lookup by name, description, and tags
-- **GitHub metrics**: stars and latest commit snapshots for each library
+- **Repository metrics**: stars and latest commit snapshots for each library (GitHub and GitLab repositories)
 - **Detail pages**: a dedicated page per library with links to its site, docs, and install instructions
 - **Bilingual UI**: toggle between English and Chinese, with light and dark themes
 

@@ -5,14 +5,13 @@ import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
 import { type Database, getDatabase } from "@/db/client";
 import {
-  githubMetrics,
   libraries,
   libraryDeliveries,
   libraryTags,
   libraryUseCases,
+  repositoryMetrics,
 } from "@/db/schema";
 import { requireAdmin } from "@/lib/admin-auth";
-import { fetchGithubMetrics } from "@/lib/github-metrics-fetcher";
 import {
   type IconSourceTarget,
   LOGO_UPLOAD_ACCEPTANCE,
@@ -26,6 +25,7 @@ import {
   urlSchema,
 } from "@/lib/library-form-schema";
 import { uploadLibraryLogo } from "@/lib/r2";
+import { fetchRepositoryMetrics } from "@/lib/repository-metrics-fetcher";
 
 export interface LibraryActionState {
   fieldErrors?: Partial<Record<string, string>>;
@@ -61,10 +61,10 @@ function toLibraryRecordValues(values: LibraryFormValues) {
       values.featuredRank === ""
         ? null
         : Number.parseInt(values.featuredRank, 10),
-    github: values.github === "" ? null : values.github,
     logo: values.logo === "" ? null : values.logo,
     name: values.name,
     pricing: values.pricing,
+    repositoryUrl: values.repositoryUrl === "" ? null : values.repositoryUrl,
     slug: values.slug,
     source: values.source,
     website: values.website,
@@ -247,24 +247,27 @@ export interface LogoFetchState {
 }
 
 const logoFetchInputSchema = z.object({
-  github: z.union([urlSchema, z.literal("")]),
+  repositoryUrl: z.union([urlSchema, z.literal("")]),
   website: urlSchema,
 });
 
-/** 从组件库官网（或其 GitHub 仓库）自动采集 Logo 字节，供后台预览确认后随表单一起上传。 */
+/** 从组件库官网（或其代码托管仓库）自动采集 Logo 字节，供后台预览确认后随表单一起上传。 */
 export async function fetchLibraryLogoAction(
   website: string,
-  github: string
+  repositoryUrl: string
 ): Promise<LogoFetchState> {
   await requireAdmin();
-  const parsed = logoFetchInputSchema.safeParse({ github, website });
+  const parsed = logoFetchInputSchema.safeParse({ repositoryUrl, website });
   if (!parsed.success) {
     return { message: parsed.error.issues[0]?.message ?? "官网地址无效" };
   }
 
   try {
     const target: IconSourceTarget = {
-      github: parsed.data.github === "" ? undefined : parsed.data.github,
+      repositoryUrl:
+        parsed.data.repositoryUrl === ""
+          ? undefined
+          : parsed.data.repositoryUrl,
       website: parsed.data.website,
     };
     const resolution = await resolveIcon(target, fetch, LOGO_UPLOAD_ACCEPTANCE);
@@ -299,16 +302,16 @@ export interface LibraryLogoSyncState {
   total?: number;
 }
 
-/** 一键为没有 Logo 的组件库自动采集 Logo（官网 → GitHub 仓库），上传 R2 后回填数据库；失败的项目保持原状。 */
+/** 一键为没有 Logo 的组件库自动采集 Logo（官网 → 代码托管仓库），上传 R2 后回填数据库；失败的项目保持原状。 */
 export async function syncAllLibraryLogosAction(): Promise<LibraryLogoSyncState> {
   await requireAdmin();
 
   const db = await getDatabase();
   const targets = await db
     .select({
-      github: libraries.github,
       id: libraries.id,
       name: libraries.name,
+      repositoryUrl: libraries.repositoryUrl,
       slug: libraries.slug,
       website: libraries.website,
     })
@@ -322,7 +325,10 @@ export async function syncAllLibraryLogosAction(): Promise<LibraryLogoSyncState>
     targets.map(async (target) => {
       try {
         const resolution = await resolveIcon(
-          { github: target.github ?? undefined, website: target.website },
+          {
+            repositoryUrl: target.repositoryUrl ?? undefined,
+            website: target.website,
+          },
           fetch,
           LOGO_UPLOAD_ACCEPTANCE
         );
@@ -369,56 +375,58 @@ export async function syncAllLibraryLogosAction(): Promise<LibraryLogoSyncState>
   };
 }
 
-export interface GithubMetricsFetchState {
+export interface RepositoryMetricsFetchState {
   latestCommitAt?: string | null;
   message?: string;
   stars?: number;
   syncedAt?: string;
 }
 
-const githubMetricsFetchInputSchema = z.object({
-  github: urlSchema,
+const repositoryMetricsFetchInputSchema = z.object({
+  repositoryUrl: urlSchema,
 });
 
-/** 从 GitHub API 自动采集单个仓库的指标（Stars / 最近提交），供后台预览确认后入库。 */
-export async function fetchGithubMetricsAction(
-  github: string
-): Promise<GithubMetricsFetchState> {
+/** 从对应的代码托管平台 API 自动采集单个仓库的指标（Stars / 最近提交），供后台预览确认后入库。 */
+export async function fetchRepositoryMetricsAction(
+  repositoryUrl: string
+): Promise<RepositoryMetricsFetchState> {
   await requireAdmin();
-  const parsed = githubMetricsFetchInputSchema.safeParse({ github });
+  const parsed = repositoryMetricsFetchInputSchema.safeParse({ repositoryUrl });
   if (!parsed.success) {
-    return { message: parsed.error.issues[0]?.message ?? "GitHub 地址无效" };
+    return {
+      message: parsed.error.issues[0]?.message ?? "仓库地址无效",
+    };
   }
 
   try {
-    return await fetchGithubMetrics(parsed.data.github);
+    return await fetchRepositoryMetrics(parsed.data.repositoryUrl);
   } catch (error) {
     return {
-      message: `GitHub 指标采集失败：${error instanceof Error ? error.message : "未知错误"}`,
+      message: `仓库指标采集失败：${error instanceof Error ? error.message : "未知错误"}`,
     };
   }
 }
 
-export interface GithubMetricsSyncState {
+export interface RepositoryMetricsSyncState {
   failures?: string[];
   message?: string;
   succeeded?: number;
   total?: number;
 }
 
-/** 一键采集所有已关联 GitHub 仓库的指标并批量 upsert 入库；采集失败的仓库保留原有数据。 */
-export async function syncAllGithubMetricsAction(): Promise<GithubMetricsSyncState> {
+/** 一键采集所有已关联仓库（GitHub/GitLab）的指标并批量 upsert 入库；采集失败的仓库保留原有数据。 */
+export async function syncAllRepositoryMetricsAction(): Promise<RepositoryMetricsSyncState> {
   await requireAdmin();
 
   const db = await getDatabase();
   const targets = await db
     .select({
-      github: libraries.github,
       id: libraries.id,
       name: libraries.name,
+      repositoryUrl: libraries.repositoryUrl,
     })
     .from(libraries)
-    .where(isNotNull(libraries.github));
+    .where(isNotNull(libraries.repositoryUrl));
 
   const failures: string[] = [];
   const metrics: {
@@ -431,7 +439,9 @@ export async function syncAllGithubMetricsAction(): Promise<GithubMetricsSyncSta
   await Promise.all(
     targets.map(async (target) => {
       try {
-        const metric = await fetchGithubMetrics(target.github as string);
+        const metric = await fetchRepositoryMetrics(
+          target.repositoryUrl as string
+        );
         metrics.push({ libraryId: target.id, ...metric });
       } catch (error) {
         failures.push(
@@ -444,7 +454,7 @@ export async function syncAllGithubMetricsAction(): Promise<GithubMetricsSyncSta
   if (metrics.length > 0) {
     try {
       await db
-        .insert(githubMetrics)
+        .insert(repositoryMetrics)
         .values(metrics)
         .onConflictDoUpdate({
           set: {
@@ -452,7 +462,7 @@ export async function syncAllGithubMetricsAction(): Promise<GithubMetricsSyncSta
             stars: sql`excluded.stars`,
             syncedAt: sql`excluded.synced_at`,
           },
-          target: githubMetrics.libraryId,
+          target: repositoryMetrics.libraryId,
         });
       refreshAdminData();
     } catch (error) {
@@ -469,26 +479,26 @@ export async function syncAllGithubMetricsAction(): Promise<GithubMetricsSyncSta
   };
 }
 
-const githubMetricsSaveInputSchema = z.object({
+const repositoryMetricsSaveInputSchema = z.object({
   latestCommitAt: z.union([z.iso.datetime(), z.null()]),
   libraryId: z.number().int().positive(),
   stars: z.number().int().nonnegative(),
   syncedAt: z.iso.datetime(),
 });
 
-/** 将后台确认后的 GitHub 指标以单条 upsert 方式写入（不影响其他组件库的快照）。 */
-export async function saveGithubMetricsAction(
+/** 将后台确认后的仓库指标以单条 upsert 方式写入（不影响其他组件库的快照）。 */
+export async function saveRepositoryMetricsAction(
   libraryId: number,
   metric: { latestCommitAt: string | null; stars: number; syncedAt: string }
 ): Promise<LibraryActionState> {
   await requireAdmin();
-  const parsed = githubMetricsSaveInputSchema.safeParse({
+  const parsed = repositoryMetricsSaveInputSchema.safeParse({
     ...metric,
     libraryId,
   });
   if (!parsed.success) {
     return {
-      message: parsed.error.issues[0]?.message ?? "无效的 GitHub 指标数据",
+      message: parsed.error.issues[0]?.message ?? "无效的仓库指标数据",
     };
   }
 
@@ -496,11 +506,11 @@ export async function saveGithubMetricsAction(
   try {
     const { latestCommitAt, stars, syncedAt } = parsed.data;
     await db
-      .insert(githubMetrics)
+      .insert(repositoryMetrics)
       .values({ latestCommitAt, libraryId, stars, syncedAt })
       .onConflictDoUpdate({
         set: { latestCommitAt, stars, syncedAt },
-        target: githubMetrics.libraryId,
+        target: repositoryMetrics.libraryId,
       });
     refreshAdminData();
     return {};
@@ -524,8 +534,8 @@ export async function deleteLibraryAction(
   try {
     await db.transaction(async (transaction) => {
       await transaction
-        .delete(githubMetrics)
-        .where(eq(githubMetrics.libraryId, parsedId.data));
+        .delete(repositoryMetrics)
+        .where(eq(repositoryMetrics.libraryId, parsedId.data));
       await transaction
         .delete(libraryDeliveries)
         .where(eq(libraryDeliveries.libraryId, parsedId.data));

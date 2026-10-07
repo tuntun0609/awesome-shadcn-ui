@@ -212,10 +212,10 @@ export default async function LibraryPage({
               {t("visitSite")}
               <ArrowUpRight aria-hidden="true" className="size-4" />
             </a>
-            {library.github ? (
+            {library.repositoryUrl ? (
               <a
                 className="inline-flex h-11 items-center gap-2 rounded-lg border px-4 font-medium text-sm"
-                href={library.github}
+                href={library.repositoryUrl}
                 rel="noreferrer"
                 target="_blank"
               >

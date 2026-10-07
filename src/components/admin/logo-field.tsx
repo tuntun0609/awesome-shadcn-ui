@@ -34,8 +34,6 @@ interface LogoFieldProps {
   /** 外部触发的采集信号（每次自增触发一次自动采集），0 表示不触发。 */
   collectSignal: number;
   file: File | null;
-  /** 用于自动采集的 GitHub 仓库地址（来自表单，空串表示未填写）。 */
-  github: string;
   id: string;
   /** 当前表单中的 R2 对象 key，空串表示无 Logo。 */
   logoKey: string;
@@ -43,6 +41,8 @@ interface LogoFieldProps {
   name: string;
   onFileChange: (file: File | null) => void;
   onRemove: () => void;
+  /** 用于自动采集的代码托管仓库地址（来自表单，空串表示未填写）。 */
+  repositoryUrl: string;
   /** 用于自动采集的官网地址（来自表单）。 */
   website: string;
 }
@@ -50,12 +50,12 @@ interface LogoFieldProps {
 export function LogoField({
   collectSignal,
   file,
-  github,
   id,
   logoKey,
   name,
   onFileChange,
   onRemove,
+  repositoryUrl,
   website,
 }: LogoFieldProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -98,7 +98,7 @@ export function LogoField({
   async function collectLogo() {
     setCollecting(true);
     try {
-      const result = await fetchLibraryLogoAction(website, github);
+      const result = await fetchLibraryLogoAction(website, repositoryUrl);
       if (
         result.message ||
         !result.base64 ||

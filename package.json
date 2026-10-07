@@ -21,8 +21,9 @@
     "migrate:logos:remote": "bun scripts/migrate-logos-to-r2.ts --remote",
     "prepare": "lefthook install",
     "start": "next start",
-    "sync:github": "bun scripts/github-sync.ts",
+    "sync:github": "bun scripts/repo-sync.ts",
     "sync:icons": "bun scripts/icon-sync.ts",
+    "sync:repos": "bun scripts/repo-sync.ts",
     "test": "bun test"
   },
   "dependencies": {

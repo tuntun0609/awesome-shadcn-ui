@@ -90,8 +90,8 @@ async function run() {
     library.logo
       ? [
           {
-            github: library.github,
             logo: library.logo,
+            repositoryUrl: library.repositoryUrl,
             slug: library.slug,
             website: library.website,
           },

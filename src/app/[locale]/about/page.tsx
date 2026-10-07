@@ -32,7 +32,7 @@ export default async function AboutPage() {
     "scope",
     "classification",
     "disclaimer",
-    "github",
+    "repository",
     "corrections",
   ] as const;
 

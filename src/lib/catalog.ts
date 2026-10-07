@@ -1,6 +1,9 @@
-import type { GithubSnapshot, Library } from "@/lib/catalog-model";
+import type { Library, RepositorySnapshot } from "@/lib/catalog-model";
 
-export type { GithubMetric, GithubSnapshot } from "@/lib/catalog-model";
+export type {
+  RepositoryMetric,
+  RepositorySnapshot,
+} from "@/lib/catalog-model";
 
 export type CatalogSort =
   | "featured"
@@ -51,7 +54,7 @@ export function filterLibraries(
 export function sortLibraries(
   items: readonly Library[],
   sort: CatalogSort,
-  metrics: GithubSnapshot,
+  metrics: RepositorySnapshot,
   likeCounts: Record<string, number> = {}
 ) {
   return [...items].sort((left, right) => {
@@ -96,7 +99,7 @@ export function sortLibraries(
 export function relatedLibraries(
   current: Library,
   items: readonly Library[],
-  metrics: GithubSnapshot,
+  metrics: RepositorySnapshot,
   limit = 4
 ): Library[] {
   const overlap = (left: readonly string[], right: readonly string[]) =>

@@ -6,6 +6,7 @@ import { fillFieldsInputSchema } from "@/lib/ai/autofill-schema";
 const TOOL_TIMEOUT_MS = 15_000;
 /** 返回给 LLM 的正文长度上限，避免撑爆上下文。 */
 const MAX_CONTENT_CHARS = 20_000;
+const GITLAB_API_BASE = "https://gitlab.com/api/v4";
 
 function githubHeaders(raw = false) {
   return {
@@ -16,6 +17,16 @@ function githubHeaders(raw = false) {
     "User-Agent": "awesome-shadcn-ui",
     "X-GitHub-Api-Version": "2022-11-28",
   };
+}
+
+function gitlabHeaders() {
+  const headers: Record<string, string> = {
+    "User-Agent": "awesome-shadcn-ui",
+  };
+  if (process.env.GITLAB_TOKEN) {
+    headers["PRIVATE-TOKEN"] = process.env.GITLAB_TOKEN;
+  }
+  return headers;
 }
 
 function errorOf(cause: unknown) {
@@ -162,79 +173,217 @@ async function searchGithubRepo(repo: string): Promise<string | null> {
   return best ?? null;
 }
 
+/** 仓库 404 时用 GitLab 项目搜索纠正命名空间；优先项目名精确匹配，其次 star 数最高。 */
+async function searchGitlabProject(project: string): Promise<string | null> {
+  try {
+    const response = await fetch(
+      `${GITLAB_API_BASE}/projects?search=${encodeURIComponent(project)}&per_page=5&simple=true`,
+      {
+        headers: gitlabHeaders(),
+        signal: AbortSignal.timeout(TOOL_TIMEOUT_MS),
+      }
+    );
+    if (!response.ok) {
+      return null;
+    }
+    const data = (await response.json()) as {
+      path: string;
+      path_with_namespace: string;
+      star_count: number;
+    }[];
+    const [best] = data
+      .map((item) => ({
+        exact: item.path.toLowerCase() === project.toLowerCase() ? 1 : 0,
+        item,
+      }))
+      .sort(
+        (left, right) =>
+          right.exact - left.exact ||
+          right.item.star_count - left.item.star_count
+      );
+    return best?.item.path_with_namespace ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** 一次拿全 GitHub 仓库的元数据与 README；404 时自动搜索纠正仓库名。 */
-export const fetchGithubRepoTool = tool({
-  description:
-    "Fetch a GitHub repository's metadata (description, license, topics, homepage) and its README content. Provide the owner and repo name; if the exact owner is unknown, give your best guess — on 404 the tool searches GitHub for the repo name, retries with the best match, and reports the resolved full name as resolvedRepo.",
-  execute: async ({ owner, repo }) => {
+async function fetchGithubRepository(repository: string) {
+  let fullName = repository;
+  let resolvedRepo: string | null = null;
+
+  let repoResponse = await fetch(`https://api.github.com/repos/${fullName}`, {
+    headers: githubHeaders(),
+    signal: AbortSignal.timeout(TOOL_TIMEOUT_MS),
+  });
+  if (repoResponse.status === 404) {
+    const match = await searchGithubRepo(
+      repository.split("/").at(-1) ?? repository
+    );
+    if (match) {
+      fullName = match;
+      resolvedRepo = match;
+      repoResponse = await fetch(`https://api.github.com/repos/${fullName}`, {
+        headers: githubHeaders(),
+        signal: AbortSignal.timeout(TOOL_TIMEOUT_MS),
+      });
+    }
+  }
+  if (!repoResponse.ok) {
+    return {
+      error:
+        repoResponse.status === 404
+          ? "repo request returned 404 (repo not found and GitHub search returned no match)"
+          : `repo request returned ${repoResponse.status}`,
+      ok: false as const,
+    };
+  }
+  const metadata = (await repoResponse.json()) as {
+    description: string | null;
+    homepage: string | null;
+    license: { spdx_id: string } | null;
+    topics: string[];
+  };
+
+  const readmeResponse = await fetch(
+    `https://api.github.com/repos/${fullName}/readme`,
+    {
+      headers: githubHeaders(true),
+      signal: AbortSignal.timeout(TOOL_TIMEOUT_MS),
+    }
+  );
+  const readme = readmeResponse.ok
+    ? (await readmeResponse.text()).slice(0, MAX_CONTENT_CHARS)
+    : "";
+
+  return {
+    description: metadata.description,
+    homepage: metadata.homepage,
+    license: metadata.license?.spdx_id ?? null,
+    ok: true as const,
+    readme,
+    resolvedRepo,
+    topics: metadata.topics,
+  };
+}
+
+/** 从 GitLab 项目的 readme_url（…/-/blob/<ref>/<path>）解析出原始文件所需的 ref 与路径。 */
+function parseGitlabReadmeUrl(readmeUrl: string) {
+  try {
+    const url = new URL(readmeUrl);
+    const markerIndex = url.pathname.indexOf("/-/");
+    if (markerIndex === -1) {
+      return null;
+    }
+    const segments = url.pathname
+      .slice(markerIndex + 3)
+      .split("/")
+      .filter(Boolean);
+    const [, ref, ...path] = segments;
+    return ref && path.length > 0 ? { path: path.join("/"), ref } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 一次拿全 GitLab 项目的元数据与 README；404 时自动搜索纠正项目名。 */
+async function fetchGitlabRepository(repository: string) {
+  let fullPath = repository;
+  let resolvedRepo: string | null = null;
+
+  const requestProject = () =>
+    fetch(
+      `${GITLAB_API_BASE}/projects/${encodeURIComponent(fullPath)}?license=true`,
+      {
+        headers: gitlabHeaders(),
+        signal: AbortSignal.timeout(TOOL_TIMEOUT_MS),
+      }
+    );
+
+  let projectResponse = await requestProject();
+  if (projectResponse.status === 404) {
+    const match = await searchGitlabProject(
+      repository.split("/").at(-1) ?? repository
+    );
+    if (match) {
+      fullPath = match;
+      resolvedRepo = match;
+      projectResponse = await requestProject();
+    }
+  }
+  if (!projectResponse.ok) {
+    return {
+      error:
+        projectResponse.status === 404
+          ? "project request returned 404 (project not found and GitLab search returned no match)"
+          : `project request returned ${projectResponse.status}`,
+      ok: false as const,
+    };
+  }
+  const project = (await projectResponse.json()) as {
+    description: string | null;
+    id: number;
+    license: { key: string; name: string } | null;
+    readme_url: string | null;
+    topics: string[];
+  };
+
+  // README：优先解析 readme_url，失败时回退到默认分支下的 README.md。
+  let readme = "";
+  const readmeTarget = project.readme_url
+    ? parseGitlabReadmeUrl(project.readme_url)
+    : null;
+  const readmeRequests = readmeTarget
+    ? [readmeTarget]
+    : [{ path: "README.md", ref: "HEAD" }];
+  for (const target of readmeRequests) {
     try {
-      let fullName = `${owner}/${repo}`;
-      let resolvedRepo: string | null = null;
-
-      let repoResponse = await fetch(
-        `https://api.github.com/repos/${fullName}`,
-        {
-          headers: githubHeaders(),
-          signal: AbortSignal.timeout(TOOL_TIMEOUT_MS),
-        }
-      );
-      if (repoResponse.status === 404) {
-        const match = await searchGithubRepo(repo);
-        if (match) {
-          fullName = match;
-          resolvedRepo = match;
-          repoResponse = await fetch(
-            `https://api.github.com/repos/${fullName}`,
-            {
-              headers: githubHeaders(),
-              signal: AbortSignal.timeout(TOOL_TIMEOUT_MS),
-            }
-          );
-        }
-      }
-      if (!repoResponse.ok) {
-        return {
-          error:
-            repoResponse.status === 404
-              ? "repo request returned 404 (repo not found and GitHub search returned no match)"
-              : `repo request returned ${repoResponse.status}`,
-          ok: false,
-        };
-      }
-      const metadata = (await repoResponse.json()) as {
-        description: string | null;
-        homepage: string | null;
-        license: { spdx_id: string } | null;
-        topics: string[];
-      };
-
+      // biome-ignore lint/performance/noAwaitInLoops: 候选路径按优先级串行尝试，避免无谓请求。
       const readmeResponse = await fetch(
-        `https://api.github.com/repos/${fullName}/readme`,
+        `${GITLAB_API_BASE}/projects/${project.id}/repository/files/${encodeURIComponent(
+          target.path
+        )}/raw?ref=${encodeURIComponent(target.ref)}`,
         {
-          headers: githubHeaders(true),
+          headers: gitlabHeaders(),
           signal: AbortSignal.timeout(TOOL_TIMEOUT_MS),
         }
       );
-      const readme = readmeResponse.ok
-        ? (await readmeResponse.text()).slice(0, MAX_CONTENT_CHARS)
-        : "";
+      if (readmeResponse.ok) {
+        readme = (await readmeResponse.text()).slice(0, MAX_CONTENT_CHARS);
+        break;
+      }
+    } catch {
+      // README 缺失不影响元数据返回，留空即可。
+    }
+  }
 
-      return {
-        description: metadata.description,
-        homepage: metadata.homepage,
-        license: metadata.license?.spdx_id ?? null,
-        ok: true,
-        readme,
-        resolvedRepo,
-        topics: metadata.topics,
-      };
+  return {
+    description: project.description,
+    homepage: null,
+    license: project.license?.key ?? null,
+    ok: true as const,
+    readme,
+    resolvedRepo,
+    topics: project.topics,
+  };
+}
+
+/** 一次拿全 GitHub/GitLab 仓库的元数据与 README；404 时自动搜索纠正仓库名。 */
+export const fetchRepositoryTool = tool({
+  description:
+    "Fetch a GitHub or GitLab repository's metadata (description, license, topics, homepage) and its README content. Provide the provider and the repository path (owner/repo for GitHub, group/project for GitLab — GitLab paths may include subgroups). If the exact owner is unknown, give your best guess — on 404 the tool searches the provider for the repository name, retries with the best match, and reports the resolved path as resolvedRepo.",
+  execute: async ({ provider, repository }) => {
+    try {
+      return provider === "gitlab"
+        ? await fetchGitlabRepository(repository)
+        : await fetchGithubRepository(repository);
     } catch (cause) {
       return { error: errorOf(cause), ok: false };
     }
   },
   inputSchema: z.object({
-    owner: z.string().min(1),
-    repo: z.string().min(1),
+    provider: z.enum(["github", "gitlab"]),
+    repository: z.string().min(1),
   }),
 });
 
@@ -251,8 +400,8 @@ const fillFieldsTool = tool({
 /** 构造 agent 工具集（ADR 0003 决策 #4：精简两件套 + 客户端 fill_fields）。 */
 export function createAutofillTools() {
   return {
-    fetch_github_repo: fetchGithubRepoTool,
     fetch_page: fetchPageTool,
+    fetch_repository: fetchRepositoryTool,
     fill_fields: fillFieldsTool,
   };
 }

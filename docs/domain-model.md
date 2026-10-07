@@ -4,7 +4,7 @@
 
 `Library` is the catalog aggregate root. Its integer `id` is internal; `slug`
 is the stable public URL identifier. A library owns its delivery types, use
-cases, tags, and optional current GitHub metric.
+cases, tags, and optional current repository metric (GitHub or GitLab).
 
 | Entity | Cardinality | Purpose |
 | --- | --- | --- |
@@ -12,7 +12,7 @@ cases, tags, and optional current GitHub metric.
 | `library_deliveries` | Many per library | Ordered, controlled delivery capabilities |
 | `library_use_cases` | Many per library | Ordered, controlled use-case classifications |
 | `library_tags` | Many per library | Ordered, free-form search terms |
-| `github_metrics` | Zero or one per library | Latest successful stars and default-branch commit snapshot |
+| `repository_metrics` | Zero or one per library | Latest successful stars and default-branch commit snapshot |
 
 ## Invariants
 
@@ -31,6 +31,6 @@ cases, tags, and optional current GitHub metric.
 ## Read model
 
 The repository assembles the normalized rows into the existing client-safe
-`Library[]` and `GithubSnapshot` shapes. The UI therefore retains its current
+`Library[]` and `RepositorySnapshot` shapes. The UI therefore retains its current
 search, filter, sorting, metadata, and detail-page behavior while persistence
 changes underneath it.

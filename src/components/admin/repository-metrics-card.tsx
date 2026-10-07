@@ -6,42 +6,42 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
-  fetchGithubMetricsAction,
-  saveGithubMetricsAction,
+  fetchRepositoryMetricsAction,
+  saveRepositoryMetricsAction,
 } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatAdminDate } from "@/lib/admin-date";
-import type { GithubMetric } from "@/lib/catalog-model";
+import type { RepositoryMetric } from "@/lib/catalog-model";
 
-interface GithubMetricsCardProps {
-  /** 已保存的 GitHub 仓库地址，空串表示未关联仓库。 */
-  github: string;
+interface RepositoryMetricsCardProps {
+  /** 已保存的代码托管仓库地址（GitHub/GitLab），空串表示未关联仓库。 */
   libraryId: number;
-  /** 当前库的 GitHub 指标快照，null 表示尚未同步。 */
-  metric: GithubMetric | null;
+  /** 当前库的仓库指标快照，null 表示尚未同步。 */
+  metric: RepositoryMetric | null;
+  repositoryUrl: string;
 }
 
-export function GithubMetricsCard({
-  github,
+export function RepositoryMetricsCard({
   libraryId,
   metric,
-}: GithubMetricsCardProps) {
+  repositoryUrl,
+}: RepositoryMetricsCardProps) {
   const router = useRouter();
   const [collecting, setCollecting] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [pending, setPending] = useState<GithubMetric | null>(null);
+  const [pending, setPending] = useState<RepositoryMetric | null>(null);
 
   async function collectMetrics() {
     setCollecting(true);
     try {
-      const result = await fetchGithubMetricsAction(github);
+      const result = await fetchRepositoryMetricsAction(repositoryUrl);
       if (
         result.message ||
         result.stars === undefined ||
         result.syncedAt === undefined
       ) {
-        toast.error(result.message ?? "GitHub 指标采集失败");
+        toast.error(result.message ?? "仓库指标采集失败");
         return;
       }
       setPending({
@@ -50,7 +50,7 @@ export function GithubMetricsCard({
         syncedAt: result.syncedAt,
       });
     } catch {
-      toast.error("GitHub 指标采集失败");
+      toast.error("仓库指标采集失败");
     } finally {
       setCollecting(false);
     }
@@ -62,16 +62,16 @@ export function GithubMetricsCard({
     }
     setSaving(true);
     try {
-      const result = await saveGithubMetricsAction(libraryId, pending);
+      const result = await saveRepositoryMetricsAction(libraryId, pending);
       if (result.message) {
         toast.error(result.message);
         return;
       }
-      toast.success("已更新 GitHub 指标");
+      toast.success("已更新仓库指标");
       setPending(null);
       router.refresh();
     } catch {
-      toast.error("GitHub 指标保存失败");
+      toast.error("仓库指标保存失败");
     } finally {
       setSaving(false);
     }
@@ -83,7 +83,7 @@ export function GithubMetricsCard({
         <div className="flex flex-col gap-x-8 gap-y-1.5 sm:flex-row sm:flex-wrap sm:items-center">
           <span className="flex items-center gap-1.5 font-medium">
             <StarIcon className="size-4 text-amber-500" />
-            GitHub 指标
+            仓库指标
           </span>
           {metric ? (
             <>
@@ -113,10 +113,12 @@ export function GithubMetricsCard({
           )}
           <div className="flex items-center gap-2 sm:ml-auto">
             <Button
-              disabled={collecting || github === ""}
+              disabled={collecting || repositoryUrl === ""}
               onClick={collectMetrics}
               size="sm"
-              title={github === "" ? "请先填写并保存 GitHub 地址" : undefined}
+              title={
+                repositoryUrl === "" ? "请先填写并保存仓库地址" : undefined
+              }
               type="button"
               variant="outline"
             >
@@ -136,7 +138,7 @@ export function GithubMetricsCard({
           <div className="flex w-full min-w-0 flex-wrap items-center gap-3 rounded-xl border bg-card p-3">
             <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
               <span className="text-muted-foreground text-xs">
-                采集自 GitHub API：Stars {pending.stars}
+                采集自代码托管平台 API：Stars {pending.stars}
                 {pending.latestCommitAt
                   ? `，最近提交 ${formatAdminDate(pending.latestCommitAt)}`
                   : ""}
